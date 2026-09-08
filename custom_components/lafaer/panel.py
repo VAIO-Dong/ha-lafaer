@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from inspect import isawaitable
 from pathlib import Path
 
 from homeassistant.components import frontend, panel_custom
@@ -20,7 +21,7 @@ async def async_register_panel(
         await hass.http.async_register_static_paths(
             [StaticPathConfig(PANEL_MODULE_URL, str(frontend_path), True)]
         )
-    panel_custom.async_register_panel(
+    registration = panel_custom.async_register_panel(
         hass,
         webcomponent_name=PANEL_COMPONENT,
         frontend_url_path=PANEL_URL,
@@ -29,6 +30,12 @@ async def async_register_panel(
         sidebar_icon="mdi:motion-sensor",
         require_admin=False,
     )
+    # Home Assistant changed this API from a synchronous callback to a
+    # coroutine. Supporting both keeps the integration compatible with the
+    # declared minimum version as well as current releases.
+    if isawaitable(registration):
+        await registration
+
 
 
 def async_remove_panel(hass: HomeAssistant) -> None:
