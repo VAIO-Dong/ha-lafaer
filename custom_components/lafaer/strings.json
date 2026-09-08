@@ -1,0 +1,27 @@
+{
+  "title": "Lafaer",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Lafaer",
+        "description": "Adds the on-demand Lafaer management panel. Devices are only contacted while their detail page is open."
+      }
+    },
+    "abort": {
+      "already_configured": "Lafaer is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lafaer options",
+        "data": {
+          "debug_persist": "Persist rotating debug logs"
+        },
+        "data_description": {
+          "debug_persist": "Disabled by default. Sensitive identifiers and pairing material are always redacted."
+        }
+      }
+    }
+  }
+}

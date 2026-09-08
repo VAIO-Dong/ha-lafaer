@@ -1,0 +1,27 @@
+{
+  "title": "Lafaer",
+  "config": {
+    "step": {
+      "user": {
+        "title": "设置 Lafaer",
+        "description": "添加按需使用的 Lafaer 管理面板。只有设备详情页打开时才会连接设备。"
+      }
+    },
+    "abort": {
+      "already_configured": "Lafaer 已配置。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lafaer 选项",
+        "data": {
+          "debug_persist": "保存轮转 debug 日志"
+        },
+        "data_description": {
+          "debug_persist": "默认关闭。敏感标识和配对材料始终会被脱敏。"
+        }
+      }
+    }
+  }
+}

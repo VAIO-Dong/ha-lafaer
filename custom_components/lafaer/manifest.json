@@ -1,0 +1,11 @@
+{
+  "domain": "lafaer",
+  "name": "Lafaer",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["http", "panel_custom", "websocket_api", "zeroconf"],
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "requirements": ["cryptography>=42.0.0"],
+  "version": "0.1.0"
+}

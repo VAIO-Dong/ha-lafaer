@@ -1,0 +1,343 @@
+"""Reference-counted, heartbeat-guarded device sessions."""
+
+from __future__ import annotations
+
+import asyncio
+import secrets
+from collections.abc import Callable, Coroutine
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+
+    from .debug import DebugBuffer
+    from .storage import DeviceStore
+
+from .const import LEASE_TIMEOUT, STATUS_INTERVAL
+from .protocol.client import LafaerProtocolClient
+from .protocol.models import StoredDevice
+
+EventCallback = Callable[[dict[str, Any]], None]
+ClosedCallback = Callable[["DeviceSession"], None]
+
+
+class DeviceSession:
+    """One shared transport for all viewers of one device detail page."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        device: StoredDevice,
+        store: DeviceStore,
+        debug: DebugBuffer,
+        on_closed: ClosedCallback | None = None,
+    ) -> None:
+        self.hass = hass
+        self.device = device
+        self.store = store
+        self.debug = debug
+        self._on_closed = on_closed
+        self.client = LafaerProtocolClient(
+            device.host,
+            device.pairing_material,
+            model=device.model,
+            debug=debug.protocol_callback,
+        )
+        self.viewers: dict[str, tuple[float, EventCallback]] = {}
+        self.snapshot: dict[str, Any] = {"connected": False}
+        self._task: asyncio.Task[None] | None = None
+        self._ready = asyncio.Event()
+        self._closed = False
+
+    async def async_start(self) -> None:
+        self.start()
+        await self._ready.wait()
+        if not self.snapshot.get("connected"):
+            error = self.snapshot.get("error", "unable to connect")
+            await self.async_close()
+            raise RuntimeError(error)
+
+    def start(self) -> None:
+        """Start loading without delaying delivery of the unsubscribe handle."""
+        if self._task is not None:
+            return
+        self._task = self.hass.async_create_task(self._async_run())
+
+    def add_viewer(self, callback: EventCallback) -> str:
+        viewer_id = secrets.token_hex(8)
+        self.viewers[viewer_id] = (
+            asyncio.get_running_loop().time() + LEASE_TIMEOUT,
+            callback,
+        )
+        return viewer_id
+
+    def heartbeat(self, viewer_id: str) -> bool:
+        viewer = self.viewers.get(viewer_id)
+        if viewer is None:
+            return False
+        self.viewers[viewer_id] = (
+            asyncio.get_running_loop().time() + LEASE_TIMEOUT,
+            viewer[1],
+        )
+        return True
+
+    def remove_viewer(self, viewer_id: str) -> None:
+        self.viewers.pop(viewer_id, None)
+
+    def _publish(self) -> None:
+        event = {"device_id": self.device.device_id, **self.snapshot}
+        for _, callback in list(self.viewers.values()):
+            callback(event)
+
+    async def _async_initial_load(self) -> None:
+        pairing_material = await self.client.async_authenticate(self.device.uid or "")
+        if pairing_material != self.device.pairing_material:
+            self.device.pairing_material = pairing_material
+            await self.store.async_save_device(self.device)
+        status, information = await asyncio.gather(
+            self.client.async_status(), self.client.async_information()
+        )
+        self.snapshot.update(
+            connected=True,
+            status=status.as_dict(),
+            information=information.as_dict(),
+        )
+        if self.device.model == "LWR02":
+            config, radar_status, detection, keep = await asyncio.gather(
+                self.client.async_lwr02_config(),
+                self.client.async_radar_status(),
+                self.client.async_thresholds(keep=False),
+                self.client.async_thresholds(keep=True),
+            )
+            self.snapshot.update(
+                config=config.as_dict(),
+                radar_status=radar_status.as_dict(),
+                detection_thresholds=detection.as_dict(),
+                keep_thresholds=keep.as_dict(),
+            )
+        else:
+            ranges, settings = await asyncio.gather(
+                self.client.async_get_lwr01_ranges(),
+                self.client.async_get_lwr01_settings(),
+            )
+            self.snapshot.update(ranges=ranges, config=settings)
+
+    async def _async_run(self) -> None:
+        try:
+            async with asyncio.timeout(LEASE_TIMEOUT):
+                await self._async_initial_load()
+            self.debug.add("lifecycle", "device session opened")
+        except Exception as err:
+            self.snapshot.update(connected=False, error=str(err))
+        finally:
+            self._ready.set()
+            self._publish()
+
+        if not self.snapshot.get("connected"):
+            await self.client.async_close()
+            self._closed = True
+            self.debug.add("lifecycle", "failed device session closed")
+            self._notify_closed()
+            return
+
+        try:
+            while not self._closed:
+                now = asyncio.get_running_loop().time()
+                expired = [key for key, (deadline, _) in self.viewers.items() if deadline <= now]
+                for viewer_id in expired:
+                    self.viewers.pop(viewer_id, None)
+                if not self.viewers:
+                    break
+                try:
+                    status = await self.client.async_status()
+                    self.snapshot.update(connected=True, status=status.as_dict(), error=None)
+                except Exception as err:
+                    self.snapshot.update(connected=False, error=str(err))
+                self._publish()
+                await asyncio.sleep(STATUS_INTERVAL)
+        except asyncio.CancelledError:
+            raise
+        finally:
+            await self.client.async_close()
+            self._closed = True
+            self.snapshot["connected"] = False
+            self.debug.add("lifecycle", "device session closed")
+            self._publish()
+            self._notify_closed()
+
+    def _notify_closed(self) -> None:
+        if self._on_closed is not None:
+            self._on_closed(self)
+
+    async def async_call(self, action: str, data: dict[str, Any]) -> None:
+        methods: dict[str, Callable[[], Coroutine[Any, Any, Any]]] = {
+            "set_settings": lambda: self._async_set_settings(data),
+            "set_led": lambda: self.client.async_set_led(bool(data["enabled"])),
+            "identify": self.client.async_identify,
+            "set_darkness": lambda: self.client.async_set_darkness(
+                bool(data["enabled"]), int(data["threshold"])
+            ),
+            "set_presence_timeout": lambda: self.client.async_set_presence_timeout(
+                int(data["seconds"])
+            ),
+            "set_work_mode": lambda: self.client.async_set_work_mode(int(data["mode"])),
+            "set_pir_sensitivity": lambda: self.client.async_set_pir_sensitivity(
+                int(data["value"])
+            ),
+            "set_radar_sensitivity": lambda: self.client.async_set_radar_sensitivity(
+                int(data["value"])
+            ),
+            "set_battery_type": lambda: self.client.async_set_battery_type(int(data["value"])),
+            "set_radar_range": lambda: self.client.async_set_radar_range(
+                [int(value) for value in data["ranges"]]
+            ),
+            "set_detection_thresholds": lambda: self.client.async_set_thresholds(
+                [int(value) for value in data["values"]], keep=False
+            ),
+            "set_keep_thresholds": lambda: self.client.async_set_thresholds(
+                [int(value) for value in data["values"]], keep=True
+            ),
+            "set_lwr01_ranges": lambda: self.client.async_set_lwr01_ranges(
+                [int(value) for value in data["enabled"]],
+                [int(value) for value in data["trigger"]],
+                [int(value) for value in data["hold"]],
+            ),
+            "set_performance_mode": lambda: self.client.async_set_performance_mode(
+                bool(data["battery"]), bool(data["usb"])
+            ),
+            "start_learning": self.client.async_start_learning,
+            "radar_reset": self.client.async_radar_reset,
+            "factory_reset": self.client.async_factory_reset,
+            "delete_management": self.client.async_delete_management,
+        }
+        if action not in methods:
+            raise ValueError(f"unsupported action: {action}")
+        await methods[action]()
+        if action not in {"factory_reset", "delete_management"}:
+            status = await self.client.async_status()
+            self.snapshot["status"] = status.as_dict()
+            if self.device.model == "LWR02":
+                self.snapshot["config"] = (await self.client.async_lwr02_config()).as_dict()
+                if action in {"set_radar_range", "radar_reset"}:
+                    self.snapshot["radar_status"] = (
+                        await self.client.async_radar_status()
+                    ).as_dict()
+                if action in {"set_detection_thresholds", "radar_reset"}:
+                    self.snapshot["detection_thresholds"] = (
+                        await self.client.async_thresholds(keep=False)
+                    ).as_dict()
+                if action in {"set_keep_thresholds", "radar_reset"}:
+                    self.snapshot["keep_thresholds"] = (
+                        await self.client.async_thresholds(keep=True)
+                    ).as_dict()
+            else:
+                self.snapshot["ranges"] = await self.client.async_get_lwr01_ranges()
+                self.snapshot["config"] = await self.client.async_get_lwr01_settings()
+            self._publish()
+
+    async def _async_set_settings(self, data: dict[str, Any]) -> None:
+        """Apply the settings form, then let async_call refresh only once."""
+        await self.client.async_set_presence_timeout(int(data["presence_timeout"]))
+        await self.client.async_set_darkness(
+            bool(data["darkness_enabled"]), int(data["darkness_threshold"])
+        )
+        if self.device.model == "LWR01":
+            await self.client.async_set_performance_mode(
+                bool(data["battery_performance"]), bool(data["usb_performance"])
+            )
+            return
+        await self.client.async_set_work_mode(int(data["work_mode"]))
+        await self.client.async_set_pir_sensitivity(int(data["pir_sensitivity"]))
+        await self.client.async_set_radar_sensitivity(int(data["radar_sensitivity"]))
+        await self.client.async_set_battery_type(int(data["battery_type"]))
+
+    async def async_read(self, kind: str) -> dict[str, Any]:
+        """Perform a foreground-only read requested by the visible panel."""
+        if self.device.model != "LWR02":
+            raise ValueError("real-time radar values are only available on LWR02")
+        if kind == "detection_energy":
+            values = await self.client.async_energy(keep=False)
+        elif kind == "keep_energy":
+            values = await self.client.async_energy(keep=True)
+        else:
+            raise ValueError(f"unsupported read: {kind}")
+        return {"kind": kind, "values": values}
+
+    async def async_close(self) -> None:
+        self._closed = True
+        self.viewers.clear()
+        if self._task is not None and self._task is not asyncio.current_task():
+            self._task.cancel()
+            await asyncio.gather(self._task, return_exceptions=True)
+        await self.client.async_close()
+        self._notify_closed()
+
+
+class SessionManager:
+    """Own active sessions and guarantee cleanup on integration unload."""
+
+    def __init__(self, hass: HomeAssistant, store: DeviceStore, debug: DebugBuffer) -> None:
+        self.hass = hass
+        self.store = store
+        self.debug = debug
+        self.sessions: dict[str, DeviceSession] = {}
+        self._lock = asyncio.Lock()
+
+    async def async_subscribe(
+        self, device_id: str, callback: EventCallback
+    ) -> tuple[str, dict[str, Any]]:
+        async with self._lock:
+            device = self.store.get(device_id)
+            if device is None:
+                raise ValueError("unknown device")
+            session = self.sessions.get(device_id)
+            if session is None or session._closed:
+                session = DeviceSession(
+                    self.hass,
+                    device,
+                    self.store,
+                    self.debug,
+                    self._session_closed,
+                )
+                self.sessions[device_id] = session
+            viewer_id = session.add_viewer(callback)
+        session.start()
+        return viewer_id, {"device_id": device_id, **session.snapshot}
+
+    def _session_closed(self, session: DeviceSession) -> None:
+        """Drop naturally expired and failed sessions from the registry."""
+        if self.sessions.get(session.device.device_id) is session:
+            self.sessions.pop(session.device.device_id, None)
+
+    def heartbeat(self, device_id: str, viewer_id: str) -> bool:
+        session = self.sessions.get(device_id)
+        return session is not None and session.heartbeat(viewer_id)
+
+    async def async_unsubscribe(self, device_id: str, viewer_id: str) -> None:
+        session = self.sessions.get(device_id)
+        if session is None:
+            return
+        session.remove_viewer(viewer_id)
+        if not session.viewers:
+            await session.async_close()
+            if self.sessions.get(device_id) is session:
+                self.sessions.pop(device_id, None)
+
+    async def async_action(self, device_id: str, action: str, data: dict[str, Any]) -> None:
+        session = self.sessions.get(device_id)
+        if session is None or not session.viewers:
+            raise RuntimeError("device detail session is not open")
+        await session.async_call(action, data)
+
+    async def async_read(self, device_id: str, kind: str) -> dict[str, Any]:
+        session = self.sessions.get(device_id)
+        if session is None or not session.viewers:
+            raise RuntimeError("device detail session is not open")
+        return await session.async_read(kind)
+
+    async def async_close_all(self) -> None:
+        sessions = list(self.sessions.values())
+        self.sessions.clear()
+        await asyncio.gather(
+            *(session.async_close() for session in sessions), return_exceptions=True
+        )

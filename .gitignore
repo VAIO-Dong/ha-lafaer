@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+
+# Private reference application and internal design notes must never ship.
+/gl_senser/
+/docs/
+
+# Local development and test artifacts.
+.pytest_cache/
+.pytest-tmp/
+.tmp/
+.ruff_cache/
+.venv/
+.uv-cache/
+.uv-python/
+.coverage
+htmlcov/

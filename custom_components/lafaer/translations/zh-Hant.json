@@ -1,0 +1,27 @@
+{
+  "title": "Lafaer",
+  "config": {
+    "step": {
+      "user": {
+        "title": "設定 Lafaer",
+        "description": "新增按需使用的 Lafaer 管理面板。只有在裝置詳細資料頁開啟時才會連線裝置。"
+      }
+    },
+    "abort": {
+      "already_configured": "Lafaer 已設定。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lafaer 選項",
+        "data": {
+          "debug_persist": "保存輪替 debug 日誌"
+        },
+        "data_description": {
+          "debug_persist": "預設關閉。敏感識別資料與配對材料始終會被遮蔽。"
+        }
+      }
+    }
+  }
+}
