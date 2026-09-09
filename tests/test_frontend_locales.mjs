@@ -54,7 +54,7 @@ assert.match(source, /_sessionGeneration/);
 assert.match(source, /await unsubscribe\(\)/);
 assert.match(source, /save_mode_sensing/);
 assert.match(source, /save_advanced/);
-assert.match(source, /prompt\(/);
+assert.doesNotMatch(source, /\b(?:prompt|confirm)\(/);
 assert.match(source, /step:this\._selected\.model==="LWR01"\?1\.4:\.75/);
 assert.match(source, /if \(!customElements\.get\("ha-lafaer-panel"\)\)/);
 assert.match(source, /s\.distance_cm/);
@@ -172,5 +172,38 @@ assert.doesNotMatch(overview, /Detection mode|PIR status|Radar status/);
 
 panel._snapshot = null;
 assert.match(panel._renderDetail(), /Connecting to device/);
+
+// Background status renders must not replace a dialog while the user is typing.
+let acceptClick, cancelClick, closed;
+const field = {dataset:{field:"name"},value:"wrong",reportValidity(){}};
+const alert = {};
+const dialog = {
+  set innerHTML(value) {},
+  addEventListener(name, callback) { if(name === "closed") closed = callback; },
+  querySelector(selector) {
+    if(selector === "[data-accept]") return {set onclick(callback){acceptClick=callback;}};
+    if(selector === "[data-cancel]") return {set onclick(callback){cancelClick=callback;}};
+    return alert;
+  },
+  querySelectorAll() {return [field];},
+  remove() {},
+};
+context.document = {createElement:()=>dialog};
+panel.shadowRoot.append = () => {};
+const pending = panel._dialog({title:"Confirm",fields:[{id:"name"}],validate:v=>v.name==="sensor"?null:"Mismatch"});
+acceptClick();
+assert.equal(alert.textContent,"Mismatch");
+assert.equal(panel._activeDialog,dialog);
+panel.render();
+assert.equal(panel._activeDialog,dialog);
+field.value="sensor";
+acceptClick();
+assert.equal((await pending).name,"sensor");
+const cancelled = panel._dialog({title:"Cancel"});
+cancelClick();
+assert.equal(await cancelled,false);
+const dismissed = panel._dialog({title:"Dismiss"});
+closed();
+assert.equal(await dismissed,false);
 
 console.log("frontend locale and lifecycle checks passed");
