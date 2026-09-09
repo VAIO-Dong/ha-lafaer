@@ -19,6 +19,11 @@ for (const key of [
   "powerSource",
   "serialNumber",
   "radarFirmware",
+  "adoptedDevices",
+  "discoveredDevices",
+  "available",
+  "offline",
+  "lastSeen",
 ]) {
   assert.equal(
     dictionarySource.match(new RegExp(`\\b${key}:`, "g"))?.length,
@@ -38,6 +43,11 @@ assert.match(source, /step:this\._selected\.model==="LWR01"\?1\.4:\.75/);
 assert.match(source, /if \(!customElements\.get\("ha-lafaer-panel"\)\)/);
 assert.match(source, /s\.distance_cm/);
 assert.match(source, /s\.work_mode/);
+assert.doesNotMatch(source, /type:"lafaer\/device\/adopt",\.\.\.device/);
+assert.match(source, /device_id:device\.device_id\.trim\(\)/);
+assert.match(source, /this\._initialScanStarted=true;await this\._scan\(\)/);
+assert.match(source, /this\._devices\.length\?this\._devices\.map/);
+assert.match(source, /unmanaged\.length\?unmanaged\.map/);
 
 class FakeHTMLElement {
   set innerHTML(value) {

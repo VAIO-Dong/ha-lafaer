@@ -11,7 +11,9 @@ LWR02 presence sensors.
 The integration does not create polling entities and does not contact sensors
 at Home Assistant startup or while dashboards and automations are running.
 
-- Discovery starts only when a user presses **Scan** and stops after 15 seconds.
+- Opening the Lafaer panel starts one bounded 15-second mDNS scan; **Scan** can
+  repeat it manually. Discovery results are cached without opening a sensor
+  session.
 - A CoAP transport is created only while a device detail page is visible.
 - Leaving the page closes it immediately.
 - A 10-second heartbeat and 25-second server lease close abandoned sessions.
@@ -21,6 +23,7 @@ at Home Assistant startup or while dashboards and automations are running.
 ## Supported features
 
 - LWR01 and LWR02 discovery over `_glinet._tcp.local.`
+- Persistent discovery cache with available/offline and last-seen status
 - Exclusive Home Assistant takeover/pairing
 - Occupancy, illuminance, battery and power status
 - LWR02 temperature, humidity and work mode
@@ -44,9 +47,9 @@ BLE firmware updates are intentionally not included in v1.
    **Lafaer**, and complete setup.
 4. Open **Lafaer** in the sidebar.
 
-Opening the sidebar itself does not contact a sensor. A device connection is
-created only after opening that device's detail page, and is closed when the
-page is left or hidden.
+Opening the sidebar performs mDNS discovery but does not create a sensor
+session. A device connection is created only after opening that device's
+detail page, and is closed when the page is left or hidden.
 
 For HACS, add this repository as a custom **Integration** repository. Formal
 HACS installation requires a tagged release.

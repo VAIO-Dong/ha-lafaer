@@ -20,6 +20,8 @@ class DiscoveredDevice:
     thread_mac: str | None = None
     blue_id: str | None = None
     name: str | None = None
+    last_seen: str | None = None
+    available: bool = False
 
     def as_public_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -32,7 +34,11 @@ class StoredDevice(DiscoveredDevice):
     pairing_material: str = field(default="", repr=False)
 
     def as_storage_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        value = asdict(self)
+        # Discovery availability is transient and is rebuilt by an explicit scan.
+        value.pop("available", None)
+        value.pop("last_seen", None)
+        return value
 
     def as_public_dict(self) -> dict[str, Any]:
         value = DiscoveredDevice.as_public_dict(self)
@@ -42,7 +48,11 @@ class StoredDevice(DiscoveredDevice):
 
     @classmethod
     def from_storage_dict(cls, data: dict[str, Any]) -> StoredDevice:
-        return cls(**data)
+        value = dict(data)
+        # Tolerate development versions that may have persisted transient fields.
+        value.pop("available", None)
+        value.pop("last_seen", None)
+        return cls(**value)
 
 
 @dataclass(frozen=True, slots=True)

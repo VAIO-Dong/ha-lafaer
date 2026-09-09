@@ -28,6 +28,16 @@ def _new_uid() -> str:
     return "".join(secrets.choice(alphabet) for _ in range(8))
 
 
+def _stored_public(controller: LafaerController, device: StoredDevice) -> dict[str, Any]:
+    """Add explicit-scan availability without opening a device connection."""
+    public = device.as_public_dict()
+    cached = controller.store.get_discovered(device.device_id, device.model)
+    if cached is not None:
+        public["available"] = cached.available
+        public["last_seen"] = cached.last_seen
+    return public
+
+
 @websocket_api.websocket_command({vol.Required("type"): "lafaer/devices/list"})
 @websocket_api.async_response
 async def websocket_list_devices(
@@ -37,7 +47,7 @@ async def websocket_list_devices(
 ) -> None:
     controller = _controller(hass)
     connection.send_result(
-        msg["id"], [device.as_public_dict() for device in controller.store.list()]
+        msg["id"], [_stored_public(controller, device) for device in controller.store.list()]
     )
 
 
@@ -62,18 +72,24 @@ async def websocket_discover(
         connection.send_error(msg["id"], "discovery_failed", str(err))
         return
 
+    cached_devices = await controller.store.async_update_discovery(devices)
     output: list[dict[str, Any]] = []
-    for device in devices:
+    for device in cached_devices:
         public = device.as_public_dict()
         stored = controller.store.get(device.device_id)
         public["adopted"] = stored is not None and stored.model == device.model
         output.append(public)
-        if stored is not None and stored.model == device.model:
+        if device.available and stored is not None and stored.model == device.model:
             stored.host = device.host
             stored.version = device.version
-            stored.blue_id = device.blue_id
+            if device.blue_id:
+                stored.blue_id = device.blue_id
             await controller.store.async_save_device(stored)
-    controller.debug.add("discovery", "scan finished", data={"device_count": len(output)})
+    controller.debug.add(
+        "discovery",
+        "scan finished",
+        data={"device_count": len(devices), "cached_device_count": len(output)},
+    )
     connection.send_result(msg["id"], output)
 
 
@@ -87,6 +103,11 @@ async def websocket_discover(
         vol.Optional("version", default=""): str,
         vol.Optional("blue_id"): str,
         vol.Optional("name"): str,
+        # Accepted for compatibility with the 0.1.1 panel, but never trusted.
+        vol.Optional("adopted"): bool,
+        vol.Optional("uid"): vol.Any(None, str),
+        vol.Optional("available"): bool,
+        vol.Optional("last_seen"): vol.Any(None, str),
     }
 )
 @websocket_api.async_response
@@ -128,7 +149,7 @@ async def websocket_adopt_device(
     )
     await controller.store.async_save_device(device)
     controller.debug.add("pairing", "device adopted by Home Assistant")
-    connection.send_result(msg["id"], device.as_public_dict())
+    connection.send_result(msg["id"], _stored_public(controller, device))
 
 
 @websocket_api.websocket_command(

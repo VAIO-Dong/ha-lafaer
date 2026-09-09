@@ -9,7 +9,7 @@ from homeassistant.components import frontend, panel_custom
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant
 
-from .const import PANEL_COMPONENT, PANEL_MODULE_URL, PANEL_URL
+from .const import PANEL_COMPONENT, PANEL_MODULE_URL, PANEL_STATIC_URL, PANEL_URL
 
 
 async def async_register_panel(
@@ -19,7 +19,7 @@ async def async_register_panel(
     frontend_path = Path(__file__).parent / "frontend" / "ha-lafaer-panel.js"
     if register_static:
         await hass.http.async_register_static_paths(
-            [StaticPathConfig(PANEL_MODULE_URL, str(frontend_path), True)]
+            [StaticPathConfig(PANEL_STATIC_URL, str(frontend_path), True)]
         )
     registration = panel_custom.async_register_panel(
         hass,
