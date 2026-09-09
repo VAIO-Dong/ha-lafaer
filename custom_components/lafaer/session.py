@@ -89,6 +89,22 @@ class DeviceSession:
         for _, callback in list(self.viewers.values()):
             callback(event)
 
+    async def _async_refresh_live_status(self) -> None:
+        """Refresh only data that is live while a detail page is visible."""
+        if self.device.model == "LWR02":
+            status, radar_status = await asyncio.gather(
+                self.client.async_status(), self.client.async_radar_status()
+            )
+            self.snapshot.update(
+                connected=True,
+                status=status.as_dict(),
+                radar_status=radar_status.as_dict(),
+                error=None,
+            )
+            return
+        status = await self.client.async_status()
+        self.snapshot.update(connected=True, status=status.as_dict(), error=None)
+
     async def _async_initial_load(self) -> None:
         pairing_material = await self.client.async_authenticate(self.device.uid or "")
         if pairing_material != self.device.pairing_material:
@@ -149,8 +165,7 @@ class DeviceSession:
                 if not self.viewers:
                     break
                 try:
-                    status = await self.client.async_status()
-                    self.snapshot.update(connected=True, status=status.as_dict(), error=None)
+                    await self._async_refresh_live_status()
                 except Exception as err:
                     self.snapshot.update(connected=False, error=str(err))
                 self._publish()

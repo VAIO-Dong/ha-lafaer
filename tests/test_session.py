@@ -8,7 +8,12 @@ from typing import Any
 import pytest
 
 from custom_components.lafaer import session as session_module
-from custom_components.lafaer.protocol.models import DeviceInfo, DeviceStatus, StoredDevice
+from custom_components.lafaer.protocol.models import (
+    DeviceInfo,
+    DeviceStatus,
+    RadarStatus,
+    StoredDevice,
+)
 
 
 class FakeHass:
@@ -90,6 +95,15 @@ class SlowClient(FakeClient):
         self.started.set()
         await self.release.wait()
         return "pairing"
+
+
+class FakeLwr2Client(FakeClient):
+    async def async_status(self) -> DeviceStatus:
+        self.status_calls += 1
+        return DeviceStatus(False, 0, 50, 100, work_mode=2)
+
+    async def async_radar_status(self) -> RadarStatus:
+        return RadarStatus([0, 1, 2] + [0] * 12, 1, 1, 0, 2, 1, 30)
 
 
 @pytest.fixture
@@ -197,3 +211,28 @@ async def test_old_unsubscribe_does_not_remove_replacement_session(manager) -> N
     assert replacement is not old_session
     assert manager.sessions["dev1"] is replacement
     await manager.async_unsubscribe("dev1", replacement_viewer)
+
+
+@pytest.mark.asyncio
+async def test_lwr02_live_refresh_includes_pir_and_radar_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(session_module, "LafaerProtocolClient", FakeLwr2Client)
+    device = StoredDevice(
+        device_id="lwr2",
+        model="LWR02",
+        host="fd00::2",
+        uid="uid2",
+        pairing_material="pairing",
+    )
+    session = session_module.DeviceSession(
+        FakeHass(), device, FakeStore(device), FakeDebug()
+    )
+
+    await session._async_refresh_live_status()
+
+    assert session.snapshot["radar_status"]["pir_status"] == 1
+    assert session.snapshot["radar_status"]["occupancy_status"] == 1
+    assert session.snapshot["radar_status"]["ranges"][1] == 1
+    assert session.snapshot["connected"] is True
+    await session.async_close()

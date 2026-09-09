@@ -28,6 +28,13 @@ for (const key of [
   "takeoverFailed",
   "takeoverSucceeded",
   "unknownError",
+  "moreActions",
+  "deviceStatus",
+  "modeSensing",
+  "pirStatus",
+  "radarStatus",
+  "currentEnergy",
+  "thresholdValue",
 ]) {
   assert.equal(
     dictionarySource.match(new RegExp(`\\b${key}:`, "g"))?.length,
@@ -55,6 +62,12 @@ assert.match(source, /unmanaged\.length\?unmanaged\.map/);
 assert.match(source, /this\._adoptionStates\.set\(key,\{status:"working"/);
 assert.match(source, /<ha-circular-progress active size="small">/);
 assert.match(source, /this\._adoptionStates\.set\(key,\{status:"error"/);
+assert.match(source, /id="menu-manual"/);
+assert.match(source, /id="menu-debug"/);
+assert.match(source, /const DETAIL_STYLES/);
+assert.match(source, /radarTriggered=radar\.occupancy_status===1/);
+assert.match(source, /<output>\$\{energy\[i\]\?\?0\}<\/output>/);
+assert.match(source, /energyLabel:this\.t\.currentEnergy/);
 
 class FakeHTMLElement {
   set innerHTML(value) {
