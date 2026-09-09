@@ -89,22 +89,6 @@ class DeviceSession:
         for _, callback in list(self.viewers.values()):
             callback(event)
 
-    async def _async_refresh_live_status(self) -> None:
-        """Refresh only data that is live while a detail page is visible."""
-        if self.device.model == "LWR02":
-            status, radar_status = await asyncio.gather(
-                self.client.async_status(), self.client.async_radar_status()
-            )
-            self.snapshot.update(
-                connected=True,
-                status=status.as_dict(),
-                radar_status=radar_status.as_dict(),
-                error=None,
-            )
-            return
-        status = await self.client.async_status()
-        self.snapshot.update(connected=True, status=status.as_dict(), error=None)
-
     async def _async_initial_load(self) -> None:
         pairing_material = await self.client.async_authenticate(self.device.uid or "")
         if pairing_material != self.device.pairing_material:
@@ -165,7 +149,10 @@ class DeviceSession:
                 if not self.viewers:
                     break
                 try:
-                    await self._async_refresh_live_status()
+                    status = await self.client.async_status()
+                    self.snapshot.update(
+                        connected=True, status=status.as_dict(), error=None
+                    )
                 except Exception as err:
                     self.snapshot.update(connected=False, error=str(err))
                 self._publish()
@@ -187,6 +174,8 @@ class DeviceSession:
     async def async_call(self, action: str, data: dict[str, Any]) -> None:
         methods: dict[str, Callable[[], Coroutine[Any, Any, Any]]] = {
             "set_settings": lambda: self._async_set_settings(data),
+            "save_mode_sensing": lambda: self._async_save_mode_sensing(data),
+            "save_advanced": lambda: self._async_save_advanced(data),
             "set_led": lambda: self.client.async_set_led(bool(data["enabled"])),
             "identify": self.client.async_identify,
             "set_darkness": lambda: self.client.async_set_darkness(
@@ -233,15 +222,23 @@ class DeviceSession:
             self.snapshot["status"] = status.as_dict()
             if self.device.model == "LWR02":
                 self.snapshot["config"] = (await self.client.async_lwr02_config()).as_dict()
-                if action in {"set_radar_range", "radar_reset"}:
+                if action in {"set_radar_range", "radar_reset", "save_mode_sensing"}:
                     self.snapshot["radar_status"] = (
                         await self.client.async_radar_status()
                     ).as_dict()
-                if action in {"set_detection_thresholds", "radar_reset"}:
+                if action in {
+                    "set_detection_thresholds",
+                    "radar_reset",
+                    "save_mode_sensing",
+                }:
                     self.snapshot["detection_thresholds"] = (
                         await self.client.async_thresholds(keep=False)
                     ).as_dict()
-                if action in {"set_keep_thresholds", "radar_reset"}:
+                if action in {
+                    "set_keep_thresholds",
+                    "radar_reset",
+                    "save_mode_sensing",
+                }:
                     self.snapshot["keep_thresholds"] = (
                         await self.client.async_thresholds(keep=True)
                     ).as_dict()
@@ -264,6 +261,45 @@ class DeviceSession:
         await self.client.async_set_work_mode(int(data["work_mode"]))
         await self.client.async_set_pir_sensitivity(int(data["pir_sensitivity"]))
         await self.client.async_set_radar_sensitivity(int(data["radar_sensitivity"]))
+        await self.client.async_set_battery_type(int(data["battery_type"]))
+
+    async def _async_save_mode_sensing(self, data: dict[str, Any]) -> None:
+        """Save the mode and sensing section as one user action."""
+        await self.client.async_set_presence_timeout(int(data["presence_timeout"]))
+        if self.device.model == "LWR01":
+            await self.client.async_set_lwr01_ranges(
+                [int(value) for value in data["enabled"]],
+                [int(value) for value in data["trigger"]],
+                [int(value) for value in data["hold"]],
+            )
+            return
+
+        work_mode = int(data["work_mode"])
+        await self.client.async_set_work_mode(work_mode)
+        if work_mode != 1:
+            await self.client.async_set_pir_sensitivity(int(data["pir_sensitivity"]))
+        if work_mode != 0:
+            await self.client.async_set_radar_sensitivity(int(data["radar_sensitivity"]))
+            await self.client.async_set_radar_range(
+                [int(value) for value in data["ranges"]]
+            )
+            await self.client.async_set_thresholds(
+                [int(value) for value in data["detection_thresholds"]], keep=False
+            )
+            await self.client.async_set_thresholds(
+                [int(value) for value in data["keep_thresholds"]], keep=True
+            )
+
+    async def _async_save_advanced(self, data: dict[str, Any]) -> None:
+        """Save the advanced section as one user action."""
+        await self.client.async_set_darkness(
+            bool(data["darkness_enabled"]), int(data["darkness_threshold"])
+        )
+        if self.device.model == "LWR01":
+            await self.client.async_set_performance_mode(
+                bool(data["battery_performance"]), bool(data["usb_performance"])
+            )
+            return
         await self.client.async_set_battery_type(int(data["battery_type"]))
 
     async def async_read(self, kind: str) -> dict[str, Any]:

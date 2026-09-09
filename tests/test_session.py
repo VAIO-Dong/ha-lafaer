@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -11,7 +12,6 @@ from custom_components.lafaer import session as session_module
 from custom_components.lafaer.protocol.models import (
     DeviceInfo,
     DeviceStatus,
-    RadarStatus,
     StoredDevice,
 )
 
@@ -95,15 +95,6 @@ class SlowClient(FakeClient):
         self.started.set()
         await self.release.wait()
         return "pairing"
-
-
-class FakeLwr2Client(FakeClient):
-    async def async_status(self) -> DeviceStatus:
-        self.status_calls += 1
-        return DeviceStatus(False, 0, 50, 100, work_mode=2)
-
-    async def async_radar_status(self) -> RadarStatus:
-        return RadarStatus([0, 1, 2] + [0] * 12, 1, 1, 0, 2, 1, 30)
 
 
 @pytest.fixture
@@ -214,10 +205,8 @@ async def test_old_unsubscribe_does_not_remove_replacement_session(manager) -> N
 
 
 @pytest.mark.asyncio
-async def test_lwr02_live_refresh_includes_pir_and_radar_status(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(session_module, "LafaerProtocolClient", FakeLwr2Client)
+@pytest.mark.parametrize("work_mode", [0, 1])
+async def test_lwr02_mode_save_only_writes_active_sensor_settings(work_mode: int) -> None:
     device = StoredDevice(
         device_id="lwr2",
         model="LWR02",
@@ -228,11 +217,34 @@ async def test_lwr02_live_refresh_includes_pir_and_radar_status(
     session = session_module.DeviceSession(
         FakeHass(), device, FakeStore(device), FakeDebug()
     )
+    client = session.client
+    client.async_set_presence_timeout = AsyncMock()
+    client.async_set_work_mode = AsyncMock()
+    client.async_set_pir_sensitivity = AsyncMock()
+    client.async_set_radar_sensitivity = AsyncMock()
+    client.async_set_radar_range = AsyncMock()
+    client.async_set_thresholds = AsyncMock()
 
-    await session._async_refresh_live_status()
+    await session._async_save_mode_sensing(
+        {
+            "presence_timeout": 30,
+            "work_mode": work_mode,
+            "pir_sensitivity": 2,
+            "radar_sensitivity": 3,
+            "ranges": [0] * 15,
+            "detection_thresholds": [100] * 15,
+            "keep_thresholds": [80] * 15,
+        }
+    )
 
-    assert session.snapshot["radar_status"]["pir_status"] == 1
-    assert session.snapshot["radar_status"]["occupancy_status"] == 1
-    assert session.snapshot["radar_status"]["ranges"][1] == 1
-    assert session.snapshot["connected"] is True
+    if work_mode == 0:
+        client.async_set_pir_sensitivity.assert_awaited_once_with(2)
+        client.async_set_radar_sensitivity.assert_not_awaited()
+        client.async_set_radar_range.assert_not_awaited()
+        client.async_set_thresholds.assert_not_awaited()
+    else:
+        client.async_set_pir_sensitivity.assert_not_awaited()
+        client.async_set_radar_sensitivity.assert_awaited_once_with(3)
+        client.async_set_radar_range.assert_awaited_once_with([0] * 15)
+        assert client.async_set_thresholds.await_count == 2
     await session.async_close()
