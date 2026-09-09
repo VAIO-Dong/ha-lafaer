@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from custom_components.lafaer.debug import DebugBuffer
+from custom_components.lafaer.debug import DebugBuffer, exception_summary
 
 
 class FakeConfig:
@@ -69,6 +69,11 @@ def test_debug_events_are_recursively_redacted(tmp_path: Path) -> None:
     assert "goodlife" not in error
     assert "0123456789abcdef" not in error
     assert event["data"]["raw"] == "<12 bytes>"
+
+
+def test_exception_summary_keeps_empty_exception_useful() -> None:
+    assert exception_summary(TimeoutError()) == "TimeoutError"
+    assert exception_summary(ValueError("bad value")) == "ValueError: bad value"
 
 
 @pytest.mark.asyncio

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import secrets
 import string
 from typing import Any
@@ -12,8 +13,11 @@ from homeassistant.core import HomeAssistant
 
 from .const import DATA_CONTROLLERS, DOMAIN, SUPPORTED_MODELS
 from .controller import LafaerController
+from .debug import exception_summary
 from .protocol.client import LafaerProtocolClient
 from .protocol.models import StoredDevice
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _controller(hass: HomeAssistant) -> LafaerController:
@@ -119,36 +123,76 @@ async def websocket_adopt_device(
     connection.require_admin()
     controller = _controller(hass)
     uid = _new_uid()
-    client = LafaerProtocolClient(
-        msg["host"],
-        msg["thread_mac"],
-        model=msg["model"],
-        debug=controller.debug.protocol_callback,
+    client: LafaerProtocolClient | None = None
+    stage = "initialization"
+    device: StoredDevice | None = None
+    controller.debug.add(
+        "pairing",
+        "HA takeover started",
+        level="info",
+        data={"device_id": msg["device_id"], "model": msg["model"]},
     )
     try:
-        pairing_material = await client.async_authenticate(uid)
-    except Exception as err:
-        controller.debug.add(
-            "pairing", "HA takeover failed", level="error", data={"error": str(err)}
+        client = LafaerProtocolClient(
+            msg["host"],
+            msg["thread_mac"],
+            model=msg["model"],
+            debug=controller.debug.protocol_callback,
         )
-        connection.send_error(msg["id"], "adoption_failed", str(err))
+        stage = "connection and authentication"
+        pairing_material = await client.async_authenticate(uid)
+        stage = "credential storage"
+        device = StoredDevice(
+            device_id=msg["device_id"],
+            model=msg["model"],
+            host=msg["host"],
+            version=msg["version"],
+            uid=uid,
+            thread_mac=msg["thread_mac"],
+            blue_id=msg.get("blue_id"),
+            name=msg.get("name") or f"{msg['model']} {msg['device_id']}",
+            pairing_material=pairing_material,
+        )
+        await controller.store.async_save_device(device)
+    except Exception as err:
+        summary = exception_summary(err)
+        message = f"{stage} failed: {summary}"
+        controller.debug.add(
+            "pairing",
+            "HA takeover failed",
+            level="error",
+            data={
+                "device_id": msg["device_id"],
+                "model": msg["model"],
+                "stage": stage,
+                "error_type": type(err).__name__,
+                "error": summary,
+            },
+        )
+        _LOGGER.exception("Lafaer takeover %s for model %s", message, msg["model"])
+        connection.send_error(msg["id"], "adoption_failed", message)
         return
     finally:
-        await client.async_close()
+        if client is not None:
+            try:
+                await client.async_close()
+            except Exception as err:  # Closing must not discard a successful takeover.
+                summary = exception_summary(err)
+                controller.debug.add(
+                    "pairing",
+                    "transport close failed",
+                    level="warning",
+                    data={"error_type": type(err).__name__, "error": summary},
+                )
+                _LOGGER.warning("Unable to close Lafaer takeover transport: %s", summary)
 
-    device = StoredDevice(
-        device_id=msg["device_id"],
-        model=msg["model"],
-        host=msg["host"],
-        version=msg["version"],
-        uid=uid,
-        thread_mac=msg["thread_mac"],
-        blue_id=msg.get("blue_id"),
-        name=msg.get("name") or f"{msg['model']} {msg['device_id']}",
-        pairing_material=pairing_material,
+    assert device is not None
+    controller.debug.add(
+        "pairing",
+        "device adopted by Home Assistant",
+        level="info",
+        data={"device_id": device.device_id, "model": device.model},
     )
-    await controller.store.async_save_device(device)
-    controller.debug.add("pairing", "device adopted by Home Assistant")
     connection.send_result(msg["id"], _stored_public(controller, device))
 
 

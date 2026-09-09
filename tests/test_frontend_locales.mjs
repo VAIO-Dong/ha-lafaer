@@ -24,6 +24,10 @@ for (const key of [
   "available",
   "offline",
   "lastSeen",
+  "takeoverConnecting",
+  "takeoverFailed",
+  "takeoverSucceeded",
+  "unknownError",
 ]) {
   assert.equal(
     dictionarySource.match(new RegExp(`\\b${key}:`, "g"))?.length,
@@ -48,6 +52,9 @@ assert.match(source, /device_id:device\.device_id\.trim\(\)/);
 assert.match(source, /this\._initialScanStarted=true;await this\._scan\(\)/);
 assert.match(source, /this\._devices\.length\?this\._devices\.map/);
 assert.match(source, /unmanaged\.length\?unmanaged\.map/);
+assert.match(source, /this\._adoptionStates\.set\(key,\{status:"working"/);
+assert.match(source, /<ha-circular-progress active size="small">/);
+assert.match(source, /this\._adoptionStates\.set\(key,\{status:"error"/);
 
 class FakeHTMLElement {
   set innerHTML(value) {

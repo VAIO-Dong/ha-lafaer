@@ -42,6 +42,13 @@ _PAIRING_RE = re.compile(r"(?i)goodlife--00[0-9a-f]{4}")
 _HEX_KEY_RE = re.compile(r"(?i)(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])")
 
 
+def exception_summary(error: BaseException) -> str:
+    """Return a useful summary even when an exception has an empty message."""
+    error_type = type(error).__name__
+    detail = str(error).strip()
+    return f"{error_type}: {detail}" if detail else error_type
+
+
 def _redact_string(value: str) -> str:
     for pattern in (_MAC_RE, _DEVICE_HEX_RE, _IPV6_RE, _PAIRING_RE, _HEX_KEY_RE):
         value = pattern.sub(_REDACTED, value)
