@@ -114,13 +114,13 @@ async def websocket_discover(
         vol.Optional("last_seen"): vol.Any(None, str),
     }
 )
+@websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_adopt_device(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    connection.require_admin()
     controller = _controller(hass)
     uid = _new_uid()
     client: LafaerProtocolClient | None = None
@@ -258,13 +258,13 @@ async def websocket_session_heartbeat(
         vol.Optional("data", default={}): dict,
     }
 )
+@websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_device_action(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    connection.require_admin()
     controller = _controller(hass)
     try:
         await controller.sessions.async_action(msg["device_id"], msg["action"], msg["data"])
@@ -310,13 +310,13 @@ async def websocket_device_read(
         vol.Required("device_id"): str,
     }
 )
+@websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_forget_device(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    connection.require_admin()
     controller = _controller(hass)
     await controller.store.async_remove_device(msg["device_id"])
     session = controller.sessions.sessions.get(msg["device_id"])
@@ -335,6 +335,7 @@ async def websocket_forget_device(
         vol.Required("name"): vol.All(str, vol.Length(min=1, max=64)),
     }
 )
+@websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_rename_device(
     hass: HomeAssistant,
@@ -342,7 +343,6 @@ async def websocket_rename_device(
     msg: dict[str, Any],
 ) -> None:
     """Rename a stored device locally without opening a sensor session."""
-    connection.require_admin()
     controller = _controller(hass)
     device = controller.store.get(msg["device_id"])
     if device is None:
@@ -369,13 +369,13 @@ async def websocket_debug_list(
 
 
 @websocket_api.websocket_command({vol.Required("type"): "lafaer/debug/clear"})
+@websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_debug_clear(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    connection.require_admin()
     await _controller(hass).debug.async_clear()
     connection.send_result(msg["id"])
 
