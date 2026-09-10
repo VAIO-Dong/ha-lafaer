@@ -20,7 +20,7 @@ const WORDS = {
     performance: "High performance", batteryPower: "On battery power", usbPower: "On USB power", download: "Download",
     manualAdd: "Manual takeover", model: "Model", deviceId: "Device ID", host: "IPv6 address / hostname", threadMac: "Thread MAC",
     requiredFields: "Device ID, address, and Thread MAC are required.", saved: "Saved.", working: "Working…",
-    confirmAction: "Confirm", rename: "Rename", deviceName: "Device name", renamed: "Device renamed.",
+    requiredValue: "Enter a value.", confirmAction: "Confirm", rename: "Rename", deviceName: "Device name", renamed: "Device renamed.",
     confirmName: "To confirm, enter the device name exactly:", nameMismatch: "The device name did not match. No action was taken.", actionDone: "Action completed.",
     distance: "Detection distance", powerSource: "Power source", batterySource: "Battery", usbSource: "USB", usbBatterySource: "USB + battery",
     serialNumber: "Serial number", firmware: "Firmware", radarFirmware: "Radar firmware", threadNetwork: "Thread network", signal: "Signal", ipv6: "IPv6",
@@ -55,7 +55,7 @@ const WORDS = {
     performance: "高性能模式", batteryPower: "电池供电时", usbPower: "USB 供电时", download: "下载",
     manualAdd: "手动接管", model: "型号", deviceId: "设备 ID", host: "IPv6 地址 / 主机名", threadMac: "Thread MAC",
     requiredFields: "设备 ID、地址和 Thread MAC 均为必填项。", saved: "已保存。", working: "正在处理…",
-    confirmAction: "确认", rename: "重命名", deviceName: "设备名称", renamed: "设备名称已更新。",
+    requiredValue: "请输入内容。", confirmAction: "确认", rename: "重命名", deviceName: "设备名称", renamed: "设备名称已更新。",
     confirmName: "请输入完整设备名称以确认：", nameMismatch: "设备名称不匹配，未执行任何操作。", actionDone: "操作已完成。",
     distance: "检测距离", powerSource: "供电方式", batterySource: "电池", usbSource: "USB", usbBatterySource: "USB + 电池",
     serialNumber: "序列号", firmware: "固件版本", radarFirmware: "雷达固件", threadNetwork: "Thread 网络", signal: "信号", ipv6: "IPv6",
@@ -90,7 +90,7 @@ const WORDS = {
     performance: "高效能模式", batteryPower: "電池供電時", usbPower: "USB 供電時", download: "下載",
     manualAdd: "手動接管", model: "型號", deviceId: "裝置 ID", host: "IPv6 位址 / 主機名稱", threadMac: "Thread MAC",
     requiredFields: "裝置 ID、位址和 Thread MAC 均為必填欄位。", saved: "已儲存。", working: "正在處理…",
-    confirmAction: "確認", rename: "重新命名", deviceName: "裝置名稱", renamed: "裝置名稱已更新。",
+    requiredValue: "請輸入內容。", confirmAction: "確認", rename: "重新命名", deviceName: "裝置名稱", renamed: "裝置名稱已更新。",
     confirmName: "請輸入完整裝置名稱以確認：", nameMismatch: "裝置名稱不相符，未執行任何操作。", actionDone: "操作已完成。",
     distance: "偵測距離", powerSource: "供電方式", batterySource: "電池", usbSource: "USB", usbBatterySource: "USB + 電池",
     serialNumber: "序號", firmware: "韌體版本", radarFirmware: "雷達韌體", threadNetwork: "Thread 網路", signal: "訊號", ipv6: "IPv6",
@@ -141,8 +141,8 @@ main{box-sizing:border-box;width:100%;min-width:0}
 .range-grid{flex-wrap:wrap}.range-segment{flex:1 0 90px}
 .threshold-grid{max-width:100%}
 ha-dialog .dialog-fields{display:grid;gap:18px;min-width:0}
-ha-dialog ha-textfield,ha-dialog select{width:100%;box-sizing:border-box}
-ha-dialog p{white-space:pre-line}ha-dialog select{padding:12px;color:var(--primary-text-color);background:var(--card-background-color);border:1px solid var(--divider-color);border-radius:4px}
+ha-dialog input,ha-dialog select{width:100%;box-sizing:border-box}
+ha-dialog p{white-space:pre-line}ha-dialog .dialog-fields label{display:grid;gap:8px}ha-dialog input,ha-dialog select{font:inherit;padding:12px;color:var(--primary-text-color);background:var(--card-background-color);border:1px solid var(--divider-color);border-radius:4px}
 @media(max-width:600px){.detail-section .form-grid,.info-grid{grid-template-columns:minmax(0,1fr)}.device-title h1{font-size:20px}.detail-header{gap:4px}.title-connected{font-size:12px}.detail-section{padding:22px 0}.status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sliders{grid-template-columns:minmax(0,1fr)}}
 </style>`;
 
@@ -192,17 +192,18 @@ class HaLafaerPanel extends HTMLElement {
     const actions=legacy
       ? `<ha-button slot="secondaryAction" data-cancel>${this.t.cancel}</ha-button><ha-button slot="primaryAction" data-accept>${esc(accept)}</ha-button>`
       : `<div slot="footer"><ha-button appearance="plain" data-cancel>${this.t.cancel}</ha-button><ha-button data-accept>${esc(accept)}</ha-button></div>`;
-    dialog.innerHTML=`<p>${esc(text)}</p><div class="dialog-fields">${fields.map(field=>field.options?`<label>${esc(field.label)}<select data-field="${field.id}">${field.options.map(value=>`<option>${esc(value)}</option>`).join("")}</select></label>`:`<ha-textfield data-field="${field.id}" label="${esc(field.label)}" value="${esc(field.value||"")}" required></ha-textfield>`).join("")}</div><ha-alert hidden alert-type="error"></ha-alert>${actions}`;
+    dialog.innerHTML=`<p>${esc(text)}</p><div class="dialog-fields">${fields.map(field=>field.options?`<label>${esc(field.label)}<select data-field="${field.id}">${field.options.map(value=>`<option>${esc(value)}</option>`).join("")}</select></label>`:`<label for="dialog-${field.id}">${esc(field.label)}<input id="dialog-${field.id}" data-field="${field.id}" type="text" value="${esc(field.value||"")}" ${field.maxLength?`maxlength="${field.maxLength}"`:""} required></label>`).join("")}</div><ha-alert hidden alert-type="error"></ha-alert>${actions}`;
     this._activeDialog=dialog;
     this.shadowRoot.append(dialog);
     dialog.open=true;
     return new Promise(resolve=>{
       const finish=value=>{if(this._activeDialog!==dialog)return;this._activeDialog=null;dialog.open=false;dialog.remove();this.render();resolve(value);};
       dialog.addEventListener("closed",()=>finish(false));
+      for(const field of dialog.querySelectorAll("input"))field.oninput=()=>field.setCustomValidity("");
       dialog.querySelector("[data-cancel]").onclick=()=>finish(false);
       dialog.querySelector("[data-accept]").onclick=()=>{
         const values=Object.fromEntries([...dialog.querySelectorAll("[data-field]")].map(field=>[field.dataset.field,field.value.trim()]));
-        for(const field of dialog.querySelectorAll("ha-textfield")){if(!field.value.trim()){field.reportValidity();return;}}
+        for(const field of dialog.querySelectorAll("input")){field.setCustomValidity(field.value.trim()?"":this.t.requiredValue);if(!field.reportValidity())return;}
         const error=validate?.(values);
         if(error){const alert=dialog.querySelector("ha-alert");alert.hidden=false;alert.textContent=error;return;}
         finish(fields.length?values:true);
@@ -239,7 +240,7 @@ class HaLafaerPanel extends HTMLElement {
   async _action(action,data={}){if(this._busy)return false;this._busy=true;this._error=this._notice=null;this.render();try{await this._hass.callWS({type:"lafaer/device/action",device_id:this._selected.device_id,action,data});this._notice=this.t.actionDone;return true;}catch(e){this._error=e.message;return false;}finally{this._busy=false;this.render();}}
   _alerts(){return `${this._error?`<ha-alert alert-type="error">${esc(this._error)}</ha-alert>`:""}${this._notice?`<ha-alert alert-type="success">${esc(this._notice)}</ha-alert>`:""}`;}
   async _confirmDanger(){const expected=this._selected.name||`${this._selected.model} ${this._selected.device_id}`;return Boolean(await this._dialog({title:this.t.dangerConfirm,text:`${this.t.confirmName}\n${expected}`,fields:[{id:"name",label:this.t.deviceName}],accept:this.t.confirmAction,validate:values=>values.name===expected?null:this.t.nameMismatch}));}
-  async _rename(){const values=await this._dialog({title:this.t.rename,fields:[{id:"name",label:this.t.deviceName,value:this._selected.name}],accept:this.t.save});if(!values)return;const name=values.name.trim();if(!name){this._error=this.t.requiredFields;this.render();return;}this._busy=true;this._error=this._notice=null;this.render();try{const updated=await this._hass.callWS({type:"lafaer/device/rename",device_id:this._selected.device_id,name});this._selected=updated;this._devices=this._devices.map(device=>device.device_id===updated.device_id?updated:device);this._notice=this.t.renamed;}catch(e){this._error=e.message;}finally{this._busy=false;this.render();}}
+  async _rename(){const values=await this._dialog({title:this.t.rename,fields:[{id:"name",label:this.t.deviceName,value:this._selected.name,maxLength:64}],accept:this.t.save});if(!values)return;const name=values.name.trim();if(!name){this._error=this.t.requiredFields;this.render();return;}this._busy=true;this._error=this._notice=null;this.render();try{const updated=await this._hass.callWS({type:"lafaer/device/rename",device_id:this._selected.device_id,name});this._selected=updated;this._devices=this._devices.map(device=>device.device_id===updated.device_id?updated:device);this._notice=this.t.renamed;}catch(e){this._error=e.message;}finally{this._busy=false;this.render();}}
   _statusItem(title,value,icon,active=false){return `<div class="status-item ${active?"active":""}"><ha-icon icon="${icon}"></ha-icon><div><small>${title}</small><strong>${esc(value)}</strong></div></div>`;}
   _detailHeader(withMenu=true){const t=this.t;return `<header class="detail-header"><ha-icon-button id="back" title="${esc(t.back)}"><ha-icon icon="mdi:arrow-left"></ha-icon></ha-icon-button><div class="device-title"><h1>${esc(this._selected.name)}</h1>${withMenu?`<ha-icon-button id="rename" title="${esc(t.rename)}"><ha-icon icon="mdi:pencil-outline"></ha-icon></ha-icon-button><span class="title-connected"><ha-icon icon="mdi:lan-connect"></ha-icon>${t.connected}</span>`:""}</div>${withMenu?`<div class="menu-wrap"><ha-icon-button id="detail-more" title="${esc(t.moreActions)}"><ha-icon icon="mdi:dots-vertical"></ha-icon></ha-icon-button>${this._menuOpen?`<div class="function-menu" role="menu">${this._selected.model==="LWR01"?`<button class="danger-item" data-danger="delete_management" role="menuitem"><ha-icon icon="mdi:link-off"></ha-icon>${t.release}</button>`:""}<button class="danger-item" data-danger="factory_reset" role="menuitem"><ha-icon icon="mdi:delete-forever-outline"></ha-icon>${t.factoryReset}</button></div>`:""}</div>`:""}</header>`;}
   _renderConnection(){const t=this.t,failed=Boolean(this._snapshot?.error||this._error);return `${DETAIL_STYLES}${this._detailHeader(false)}<div class="connection-state">${failed?`<ha-icon icon="mdi:lan-disconnect"></ha-icon><h2>${t.connectionFailed}</h2><p>${t.connectionFailedHint}</p><ha-button id="retry">${t.retry}</ha-button>`:`<ha-circular-progress active></ha-circular-progress><h2>${t.connectingDevice}</h2><p>${t.connectingHint}</p>`}</div>`;}

@@ -175,7 +175,7 @@ assert.match(panel._renderDetail(), /Connecting to device/);
 
 // Background status renders must not replace a dialog while the user is typing.
 let acceptClick, cancelClick, closed;
-const field = {dataset:{field:"name"},value:"wrong",reportValidity(){}};
+const field = {dataset:{field:"name"},value:"wrong",setCustomValidity(value){this.error=value;},reportValidity(){return !this.error;}};
 const alert = {};
 const dialog = {
   set innerHTML(value) {this.markup=value;},
@@ -194,6 +194,8 @@ const pending = panel._dialog({title:"Confirm",fields:[{id:"name"}],validate:v=>
 assert.equal(dialog.headerTitle,"Confirm");
 assert.match(dialog.markup, /<div slot="footer">.*data-cancel.*data-accept/s);
 assert.doesNotMatch(dialog.markup, /slot="primaryAction"/);
+assert.match(dialog.markup, /<input id="dialog-name"/);
+assert.doesNotMatch(dialog.markup, /ha-textfield/);
 acceptClick();
 assert.equal(alert.textContent,"Mismatch");
 assert.equal(panel._activeDialog,dialog);
@@ -227,6 +229,19 @@ acceptClick();
 await adoption;
 assert.equal(requests.length,1);
 assert.equal(requests[0].type,"lafaer/device/adopt");
+
+panel._hass.callWS=async request=>{requests.push(request);return {...panel._selected,name:request.name};};
+const rename=panel._rename();
+assert.match(dialog.markup,/value="Test sensor"/);
+assert.match(dialog.markup,/maxlength="64"/);
+field.value="";
+acceptClick();
+assert.equal(panel._activeDialog,dialog);
+field.value="Renamed sensor";
+acceptClick();
+await rename;
+assert.equal(requests.at(-1).type,"lafaer/device/rename");
+assert.equal(panel._selected.name,"Renamed sensor");
 for(const language of ["en","zh-Hans","zh-Hant"]){
   panel._hass.language=language;
   assert.match(panel.t.takeoverWarning,/\nHome Assistant/);
