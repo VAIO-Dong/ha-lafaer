@@ -178,7 +178,7 @@ let acceptClick, cancelClick, closed;
 const field = {dataset:{field:"name"},value:"wrong",reportValidity(){}};
 const alert = {};
 const dialog = {
-  set innerHTML(value) {},
+  set innerHTML(value) {this.markup=value;},
   addEventListener(name, callback) { if(name === "closed") closed = callback; },
   querySelector(selector) {
     if(selector === "[data-accept]") return {set onclick(callback){acceptClick=callback;}};
@@ -191,6 +191,9 @@ const dialog = {
 context.document = {createElement:()=>dialog};
 panel.shadowRoot.append = () => {};
 const pending = panel._dialog({title:"Confirm",fields:[{id:"name"}],validate:v=>v.name==="sensor"?null:"Mismatch"});
+assert.equal(dialog.headerTitle,"Confirm");
+assert.match(dialog.markup, /<div slot="footer">.*data-cancel.*data-accept/s);
+assert.doesNotMatch(dialog.markup, /slot="primaryAction"/);
 acceptClick();
 assert.equal(alert.textContent,"Mismatch");
 assert.equal(panel._activeDialog,dialog);
@@ -205,5 +208,29 @@ assert.equal(await cancelled,false);
 const dismissed = panel._dialog({title:"Dismiss"});
 closed();
 assert.equal(await dismissed,false);
+
+dialog.heading="";
+const legacyConfirmation=panel._dialog({title:"Legacy confirmation"});
+assert.equal(dialog.heading,"Legacy confirmation");
+assert.match(dialog.markup,/slot="primaryAction" data-accept/);
+assert.match(dialog.markup,/slot="secondaryAction" data-cancel/);
+acceptClick();
+assert.equal(await legacyConfirmation,true);
+delete dialog.heading;
+
+const requests=[];
+panel._hass.callWS=async request=>{requests.push(request);};
+panel._load=async()=>{};
+const adoption=panel._adopt({device_id:"new-device",host:"fd00::2",thread_mac:"0011223344556677",model:"LWR02"});
+assert.match(dialog.markup,/<div slot="footer">.*data-accept/s);
+acceptClick();
+await adoption;
+assert.equal(requests.length,1);
+assert.equal(requests[0].type,"lafaer/device/adopt");
+for(const language of ["en","zh-Hans","zh-Hant"]){
+  panel._hass.language=language;
+  assert.match(panel.t.takeoverWarning,/\nHome Assistant/);
+  assert.match(panel.t.connectionFailedHint,/IPv6/);
+}
 
 console.log("frontend locale and lifecycle checks passed");

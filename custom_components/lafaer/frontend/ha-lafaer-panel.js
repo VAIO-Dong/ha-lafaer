@@ -3,7 +3,7 @@ const WORDS = {
     title: "Lafaer", devices: "Devices", scan: "Scan for devices", scanning: "Scanning…",
     noDevices: "No Lafaer devices found", disconnected: "Disconnected", connected: "Connected",
     open: "Open", takeover: "Take over", takeoverTitle: "Take over this device?",
-    takeoverWarning: "The sensor stores one management key. Home Assistant will replace the App key, and the App will no longer manage this sensor.",
+    takeoverWarning: "The sensor stores one management key.\nHome Assistant will replace the App key, and the App will no longer manage this sensor.",
     pairHint: "Hold the sensor button for 3 seconds until its light flashes slowly, then confirm.", cancel: "Cancel", confirm: "Confirm takeover",
     occupancy: "Occupancy", detected: "Detected", clear: "Clear", illuminance: "Illuminance", battery: "Battery",
     temperature: "Temperature", humidity: "Humidity", workMode: "Detection mode", controls: "Controls",
@@ -33,13 +33,13 @@ const WORDS = {
     moreActions: "More actions", deviceStatus: "Device status", deviceControls: "Device controls", modeSensing: "Mode & sensing",
     advancedSettings: "Advanced settings",
     currentEnergy: "Current energy", thresholdValue: "Threshold", energyLegend: "Bar: current energy · Line: configured threshold", close: "Close",
-    connectingDevice: "Connecting to device", connectingHint: "Make sure the sensor is powered on and nearby.", connectionFailed: "Unable to connect", connectionFailedHint: "Check the sensor power and distance, then try again.", retry: "Retry",
+    connectingDevice: "Connecting to device", connectingHint: "Connecting through the Home Assistant IPv6 network.", connectionFailed: "Unable to connect", connectionFailedHint: "Check that Home Assistant can reach the Thread Border Router and sensor over IPv6, then try again.", retry: "Retry",
     radarConfiguration: "Radar configuration", energyAdvanced: "Radar energy advanced settings"
   },
   "zh-Hans": {
     title: "Lafaer", devices: "设备", scan: "扫描设备", scanning: "正在扫描…", noDevices: "未发现 Lafaer 设备",
     disconnected: "未连接", connected: "已连接", open: "打开", takeover: "接管",
-    takeoverTitle: "接管此设备？", takeoverWarning: "传感器只能保存一套管理密钥。Home Assistant 将覆盖 App 密钥，此后 App 无法继续管理该传感器。",
+    takeoverTitle: "接管此设备？", takeoverWarning: "传感器只能保存一套管理密钥。\nHome Assistant 将覆盖 App 密钥，此后 App 无法继续管理该传感器。",
     pairHint: "请长按传感器按钮 3 秒，直到指示灯缓慢闪烁，然后确认。", cancel: "取消", confirm: "确认接管",
     occupancy: "占用状态", detected: "检测到有人", clear: "无人", illuminance: "照度", battery: "电量",
     temperature: "温度", humidity: "湿度", workMode: "检测模式", controls: "快捷控制", led: "指示灯",
@@ -68,13 +68,13 @@ const WORDS = {
     moreActions: "更多功能", deviceStatus: "设备状态", deviceControls: "设备控制", modeSensing: "模式与感应",
     advancedSettings: "高级设置",
     currentEnergy: "当前能量", thresholdValue: "设定阈值", energyLegend: "柱形：当前能量 · 横线：设定阈值", close: "关闭",
-    connectingDevice: "正在连接设备", connectingHint: "请确认传感器已开机并处于附近。", connectionFailed: "无法连接设备", connectionFailedHint: "请检查传感器电源和距离，然后重试。", retry: "重试",
+    connectingDevice: "正在连接设备", connectingHint: "正在通过 Home Assistant 的 IPv6 网络连接。", connectionFailed: "无法连接设备", connectionFailedHint: "请检查 Home Assistant 到 Thread 边界路由器和传感器的 IPv6 网络是否连通，然后重试。", retry: "重试",
     radarConfiguration: "雷达配置", energyAdvanced: "雷达能量高级设置"
   },
   "zh-Hant": {
     title: "Lafaer", devices: "裝置", scan: "掃描裝置", scanning: "正在掃描…", noDevices: "找不到 Lafaer 裝置",
     disconnected: "未連線", connected: "已連線", open: "開啟", takeover: "接管",
-    takeoverTitle: "接管此裝置？", takeoverWarning: "感測器只能保存一組管理金鑰。Home Assistant 將覆寫 App 金鑰，此後 App 無法繼續管理此感測器。",
+    takeoverTitle: "接管此裝置？", takeoverWarning: "感測器只能保存一組管理金鑰。\nHome Assistant 將覆寫 App 金鑰，此後 App 無法繼續管理此感測器。",
     pairHint: "請長按感測器按鈕 3 秒，直到指示燈緩慢閃爍，然後確認。", cancel: "取消", confirm: "確認接管",
     occupancy: "佔用狀態", detected: "偵測到有人", clear: "無人", illuminance: "照度", battery: "電量",
     temperature: "溫度", humidity: "濕度", workMode: "偵測模式", controls: "快速控制", led: "指示燈",
@@ -103,7 +103,7 @@ const WORDS = {
     moreActions: "更多功能", deviceStatus: "裝置狀態", deviceControls: "裝置控制", modeSensing: "模式與感應",
     advancedSettings: "進階設定",
     currentEnergy: "目前能量", thresholdValue: "設定閾值", energyLegend: "柱形：目前能量 · 橫線：設定閾值", close: "關閉",
-    connectingDevice: "正在連線裝置", connectingHint: "請確認感測器已開機並位於附近。", connectionFailed: "無法連線裝置", connectionFailedHint: "請檢查感測器電源和距離，然後重試。", retry: "重試",
+    connectingDevice: "正在連線裝置", connectingHint: "正在透過 Home Assistant 的 IPv6 網路連線。", connectionFailed: "無法連線裝置", connectionFailedHint: "請檢查 Home Assistant 到 Thread 邊界路由器和感測器的 IPv6 網路是否連通，然後重試。", retry: "重試",
     radarConfiguration: "雷達設定", energyAdvanced: "雷達能量進階設定"
   }
 };
@@ -185,8 +185,14 @@ class HaLafaerPanel extends HTMLElement {
   async _dialog({title,text="",fields=[],accept=this.t.save,validate}){
     if(this._activeDialog)return false;
     const dialog=document.createElement("ha-dialog");
-    dialog.heading=title;
-    dialog.innerHTML=`<p>${esc(text)}</p><div class="dialog-fields">${fields.map(field=>field.options?`<label>${esc(field.label)}<select data-field="${field.id}">${field.options.map(value=>`<option>${esc(value)}</option>`).join("")}</select></label>`:`<ha-textfield data-field="${field.id}" label="${esc(field.label)}" value="${esc(field.value||"")}" required></ha-textfield>`).join("")}</div><ha-alert hidden alert-type="error"></ha-alert><ha-button slot="secondaryAction" data-cancel>${this.t.cancel}</ha-button><ha-button slot="primaryAction" data-accept>${esc(accept)}</ha-button>`;
+    // HA replaced the legacy action slots with a single footer slot.
+    const legacy="heading" in dialog;
+    if(legacy)dialog.heading=title;
+    else dialog.headerTitle=title;
+    const actions=legacy
+      ? `<ha-button slot="secondaryAction" data-cancel>${this.t.cancel}</ha-button><ha-button slot="primaryAction" data-accept>${esc(accept)}</ha-button>`
+      : `<div slot="footer"><ha-button appearance="plain" data-cancel>${this.t.cancel}</ha-button><ha-button data-accept>${esc(accept)}</ha-button></div>`;
+    dialog.innerHTML=`<p>${esc(text)}</p><div class="dialog-fields">${fields.map(field=>field.options?`<label>${esc(field.label)}<select data-field="${field.id}">${field.options.map(value=>`<option>${esc(value)}</option>`).join("")}</select></label>`:`<ha-textfield data-field="${field.id}" label="${esc(field.label)}" value="${esc(field.value||"")}" required></ha-textfield>`).join("")}</div><ha-alert hidden alert-type="error"></ha-alert>${actions}`;
     this._activeDialog=dialog;
     this.shadowRoot.append(dialog);
     dialog.open=true;
