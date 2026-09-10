@@ -163,6 +163,8 @@ class RadarStatus:
     radar_sensitivity: int
     pir_sensitivity: int
     presence_timeout: int
+    ranges_valid: bool = True
+    status_code: int = 0
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)

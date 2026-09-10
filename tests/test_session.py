@@ -21,6 +21,27 @@ class FakeHass:
         return asyncio.create_task(coroutine)
 
 
+@pytest.mark.asyncio
+async def test_failed_initial_read_cancels_siblings_before_returning() -> None:
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    async def fail():
+        await started.wait()
+        raise ValueError("radar error")
+
+    async def sibling():
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    with pytest.raises(ValueError, match="radar error"):
+        await session_module._gather_reads(fail(), sibling())
+    assert cancelled.is_set()
+
+
 class FakeStore:
     def __init__(self, device: StoredDevice) -> None:
         self.device = device

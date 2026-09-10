@@ -21,6 +21,18 @@ EventCallback = Callable[[dict[str, Any]], None]
 ClosedCallback = Callable[["DeviceSession"], None]
 
 
+async def _gather_reads(*reads: Coroutine[Any, Any, Any]) -> list[Any]:
+    """Finish cancelling sibling reads before their transport can be closed."""
+    tasks = [asyncio.create_task(read) for read in reads]
+    try:
+        return await asyncio.gather(*tasks)
+    except BaseException:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+
+
 class DeviceSession:
     """One shared transport for all viewers of one device detail page."""
 
@@ -94,7 +106,7 @@ class DeviceSession:
         if pairing_material != self.device.pairing_material:
             self.device.pairing_material = pairing_material
             await self.store.async_save_device(self.device)
-        status, information = await asyncio.gather(
+        status, information = await _gather_reads(
             self.client.async_status(), self.client.async_information()
         )
         self.snapshot.update(
@@ -103,7 +115,7 @@ class DeviceSession:
             information=information.as_dict(),
         )
         if self.device.model == "LWR02":
-            config, radar_status, detection, keep = await asyncio.gather(
+            config, radar_status, detection, keep = await _gather_reads(
                 self.client.async_lwr02_config(),
                 self.client.async_radar_status(),
                 self.client.async_thresholds(keep=False),
@@ -116,7 +128,7 @@ class DeviceSession:
                 keep_thresholds=keep.as_dict(),
             )
         else:
-            ranges, settings = await asyncio.gather(
+            ranges, settings = await _gather_reads(
                 self.client.async_get_lwr01_ranges(),
                 self.client.async_get_lwr01_settings(),
             )
@@ -129,6 +141,7 @@ class DeviceSession:
             self.debug.add("lifecycle", "device session opened")
         except Exception as err:
             self.snapshot.update(connected=False, error=str(err))
+            self.debug.add("lifecycle", "device session initialization failed", error=str(err))
         finally:
             self._ready.set()
             self._publish()
@@ -193,7 +206,7 @@ class DeviceSession:
             ),
             "set_battery_type": lambda: self.client.async_set_battery_type(int(data["value"])),
             "set_radar_range": lambda: self.client.async_set_radar_range(
-                [int(value) for value in data["ranges"]]
+                self._validated_radar_ranges(data["ranges"])
             ),
             "set_detection_thresholds": lambda: self.client.async_set_thresholds(
                 [int(value) for value in data["values"]], keep=False
@@ -280,15 +293,22 @@ class DeviceSession:
             await self.client.async_set_pir_sensitivity(int(data["pir_sensitivity"]))
         if work_mode != 0:
             await self.client.async_set_radar_sensitivity(int(data["radar_sensitivity"]))
-            await self.client.async_set_radar_range(
-                [int(value) for value in data["ranges"]]
-            )
+            if self.snapshot.get("radar_status", {}).get("ranges_valid", True):
+                await self.client.async_set_radar_range(
+                    self._validated_radar_ranges(data["ranges"])
+                )
             await self.client.async_set_thresholds(
                 [int(value) for value in data["detection_thresholds"]], keep=False
             )
             await self.client.async_set_thresholds(
                 [int(value) for value in data["keep_thresholds"]], keep=True
             )
+
+    def _validated_radar_ranges(self, values: list[int]) -> list[int]:
+        """Prevent replacing unknown distance settings after a radar error."""
+        if not self.snapshot.get("radar_status", {}).get("ranges_valid", True):
+            raise ValueError("radar distance configuration is unavailable")
+        return [int(value) for value in values]
 
     async def _async_save_advanced(self, data: dict[str, Any]) -> None:
         """Save the advanced section as one user action."""

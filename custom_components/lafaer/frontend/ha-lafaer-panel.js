@@ -34,7 +34,7 @@ const WORDS = {
     advancedSettings: "Advanced settings",
     currentEnergy: "Current energy", thresholdValue: "Threshold", energyLegend: "Bar: current energy · Line: configured threshold", close: "Close",
     connectingDevice: "Connecting to device", connectingHint: "Connecting through the Home Assistant IPv6 network.", connectionFailed: "Unable to connect", connectionFailedHint: "Check that Home Assistant can reach the Thread Border Router and sensor over IPv6, then try again.", retry: "Retry",
-    radarConfiguration: "Radar configuration", energyAdvanced: "Radar energy advanced settings"
+    radarUnavailable: "Distance settings are temporarily unavailable. Other device information is still available.", radarConfiguration: "Radar configuration", energyAdvanced: "Radar energy advanced settings"
   },
   "zh-Hans": {
     title: "Lafaer", devices: "设备", scan: "扫描设备", scanning: "正在扫描…", noDevices: "未发现 Lafaer 设备",
@@ -69,7 +69,7 @@ const WORDS = {
     advancedSettings: "高级设置",
     currentEnergy: "当前能量", thresholdValue: "设定阈值", energyLegend: "柱形：当前能量 · 横线：设定阈值", close: "关闭",
     connectingDevice: "正在连接设备", connectingHint: "正在通过 Home Assistant 的 IPv6 网络连接。", connectionFailed: "无法连接设备", connectionFailedHint: "请检查 Home Assistant 到 Thread 边界路由器和传感器的 IPv6 网络是否连通，然后重试。", retry: "重试",
-    radarConfiguration: "雷达配置", energyAdvanced: "雷达能量高级设置"
+    radarUnavailable: "距离设置暂不可用，其他设备信息仍可查看。", radarConfiguration: "雷达配置", energyAdvanced: "雷达能量高级设置"
   },
   "zh-Hant": {
     title: "Lafaer", devices: "裝置", scan: "掃描裝置", scanning: "正在掃描…", noDevices: "找不到 Lafaer 裝置",
@@ -104,7 +104,7 @@ const WORDS = {
     advancedSettings: "進階設定",
     currentEnergy: "目前能量", thresholdValue: "設定閾值", energyLegend: "柱形：目前能量 · 橫線：設定閾值", close: "關閉",
     connectingDevice: "正在連線裝置", connectingHint: "正在透過 Home Assistant 的 IPv6 網路連線。", connectionFailed: "無法連線裝置", connectionFailedHint: "請檢查 Home Assistant 到 Thread 邊界路由器和感測器的 IPv6 網路是否連通，然後重試。", retry: "重試",
-    radarConfiguration: "雷達設定", energyAdvanced: "雷達能量進階設定"
+    radarUnavailable: "距離設定暫不可用，其他裝置資訊仍可查看。", radarConfiguration: "雷達設定", energyAdvanced: "雷達能量進階設定"
   }
 };
 
@@ -255,7 +255,7 @@ class HaLafaerPanel extends HTMLElement {
     let overview=this._statusItem(t.occupancy,occupied===null?"—":occupied?t.detected:t.clear,"mdi:account-check",occupied===true)+this._statusItem(t.illuminance,s.illuminance==null?"—":`${s.illuminance} lx`,"mdi:brightness-5");
     if(this._selected.model==="LWR02")overview+=this._statusItem(t.temperature,s.temperature_c==null?"—":`${s.temperature_c} °C`,"mdi:thermometer")+this._statusItem(t.humidity,s.humidity==null?"—":`${s.humidity}%`,"mdi:water-percent")+this._statusItem(t.battery,s.battery_level==null?"—":`${s.battery_level}%`,"mdi:battery");
     else overview+=this._statusItem(t.distance,s.distance_cm==null?"—":`${s.distance_cm} cm`,"mdi:map-marker-distance")+this._statusItem(t.powerSource,s.power_type==null?"—":power,"mdi:power-plug")+this._statusItem(t.battery,s.battery_level==null?"—":`${s.battery_level}%`,"mdi:battery");
-    return `${DETAIL_STYLES}${this._detailHeader()}${this._alerts()}<div class="detail-surface"><section class="detail-section overview"><h2>${t.deviceStatus}</h2><div class="status-grid">${overview}</div></section><hr>${this._renderAdvanced()}<hr>${this._renderModeSensing()}<hr>${this._renderInfo()}</div>`;
+    return `${DETAIL_STYLES}${this._detailHeader()}${this._alerts()}${this._snapshot?.radar_status?.ranges_valid===false?`<ha-alert alert-type="warning">${t.radarUnavailable}</ha-alert>`:""}<div class="detail-surface"><section class="detail-section overview"><h2>${t.deviceStatus}</h2><div class="status-grid">${overview}</div></section><hr>${this._renderAdvanced()}<hr>${this._renderModeSensing()}<hr>${this._renderInfo()}</div>`;
   }
   _renderInfo(){const t=this.t,i=this._snapshot?.information||{};const rows=(values)=>values.map(([k,v])=>`<div class="info-row"><span>${esc(k)}</span><code>${esc(v||"—")}</code></div>`).join("");return `<section class="detail-section"><h2>${t.deviceInfo}</h2><div class="info-grid">${rows([[t.model,i.model||this._selected.model],[t.deviceId,this._selected.device_id],[t.serialNumber,i.serial_number],["MAC",i.mac],[t.firmware,i.firmware_version||this._selected.version],[t.radarFirmware,i.radar_version]])}</div><h3>${t.networkInfo}</h3><div class="info-grid">${rows([[t.threadNetwork,i.thread_network_name],[t.signal,i.rssi],[t.ipv6,this._selected.host],[t.threadMac,i.thread_mac]])}</div><div class="danger button-row"><ha-button data-forget>${t.forget}</ha-button></div></section>`;}
   _renderModeSensing(){const t=this.t,cfg=this._snapshot?.config||{},ranges=this._snapshot?.ranges,s=this._snapshot?.status||{};if(this._selected.model==="LWR01")return `<section class="detail-section"><h2>${t.modeSensing}</h2><div class="form-grid"><label>${t.presenceTimeout}<input id="timeout" type="number" min="20" max="3600" value="${cfg.presence_timeout??30}"></label></div><div class="button-row"><ha-button id="learning">${t.learning}</ha-button></div><details id="range-details" class="energy-advanced" ${this._rangeOpen?"open":""}><summary>${t.range}</summary><lafaer-range-editor id="range"></lafaer-range-editor><div class="sliders">${(ranges?.trigger||[]).map((v,i)=>`<label>${i+1} ${t.trigger}<input class="trigger" data-i="${i}" type="range" min="10" max="90" value="${100-v}"></label><label>${i+1} ${t.hold}<input class="hold" data-i="${i}" type="range" min="10" max="90" value="${100-ranges.hold[i]}"></label>`).join("")}</div></details><div class="button-row"><ha-button id="save-mode">${t.save}</ha-button></div></section>`;const mode=Number(this._workModeDraft??s.work_mode??2),pirAvailable=mode!==1,radarAvailable=mode!==0;return `<section class="detail-section"><h2>${t.modeSensing}</h2><div class="form-grid"><label>${t.workMode}<select id="work-mode"><option value="0">${t.pirOnly}</option><option value="1">${t.radarOnly}</option><option value="2">${t.hybrid}</option></select></label><label>${t.presenceTimeout}<input id="timeout" type="number" min="10" max="3600" value="${cfg.presence_timeout??30}"></label></div>${pirAvailable?`<div class="form-grid pir-config"><label>${t.pirSensitivity}<select id="pir-sensitivity"><option value="0">${t.low}</option><option value="1">${t.medium}</option><option value="2">${t.high}</option></select></label></div>`:""}${radarAvailable?`<div class="radar-config"><h3>${t.radarConfiguration}</h3><div class="form-grid"><label>${t.radarSensitivity}<select id="radar-sensitivity"><option value="0">${t.low}</option><option value="1">${t.medium}</option><option value="2">${t.high}</option><option value="3">${t.custom}</option></select></label></div><div class="button-row"><ha-button id="learning">${t.learning}</ha-button></div><details id="range-details" class="energy-advanced" ${this._rangeOpen?"open":""}><summary>${t.range}</summary><lafaer-range-editor id="range"></lafaer-range-editor></details><details id="energy-advanced" class="energy-advanced" ${this._energyOpen?"open":""}><summary>${t.energyAdvanced}</summary><div class="threshold-block"><h3>${t.detectionThreshold}</h3><lafaer-threshold-chart id="detection-chart"></lafaer-threshold-chart></div><div class="threshold-block"><h3>${t.keepThreshold}</h3><lafaer-threshold-chart id="keep-chart"></lafaer-threshold-chart></div></details><div class="danger button-row"><ha-button data-danger="radar_reset">${t.radarReset}</ha-button></div></div>`:""}<div class="button-row"><ha-button id="save-mode">${t.save}</ha-button></div></section>`;}
@@ -283,6 +283,7 @@ class HaLafaerPanel extends HTMLElement {
     if(q("#range")){
       const fallback=this._selected.model==="LWR01"?(this._snapshot?.ranges?.enabled||Array(8).fill(0)):(this._snapshot?.radar_status?.ranges||Array(15).fill(0));
       q("#range").config={values:this._rangeDraft||fallback,visibleCount:8,step:this._selected.model==="LWR01"?1.4:.75,disabledValue:this._selected.model==="LWR01"?0:2,enabledValue:this._selected.model==="LWR01"?1:0};
+      q("#range").inert=this._snapshot?.radar_status?.ranges_valid===false;
       q("#range").addEventListener("value-changed",e=>{this._rangeDraft=e.detail.value;});
     }
     if(q("#detection-chart")){

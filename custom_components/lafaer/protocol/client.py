@@ -11,7 +11,7 @@ import asyncio
 import secrets
 import socket
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Final
 
 from .codec import (
@@ -168,6 +168,9 @@ class CoapTransport:
             remote_addr=(self.host, self.port),
             family=family,
         )
+        if self._closed:
+            transport.close()
+            raise CoapError("transport is closed")
         self._transport = transport
         self._protocol = protocol
 
@@ -184,6 +187,8 @@ class CoapTransport:
 
             timeout = 1.0
             for _attempt in range(5):
+                if self._closed or self._transport is None:
+                    raise CoapError("transport is closed")
                 self._transport.sendto(packet)
                 deadline = asyncio.get_running_loop().time() + timeout
                 while True:
@@ -227,6 +232,8 @@ class CoapTransport:
 
     async def async_close(self) -> None:
         self._closed = True
+        if self._protocol is not None:
+            self._protocol.queue.put_nowait(CoapError("transport is closed"))
         if self._transport is not None:
             self._transport.close()
             self._transport = None
@@ -255,13 +262,15 @@ class LafaerProtocolClient:
         self._transport = CoapTransport(host)
         self._debug = debug
         self._strict_checksum = strict_checksum
+        self._radar_ranges: list[int] = []
 
     def _event(self, event: str, **data: Any) -> None:
         if self._debug is not None:
             self._debug(event, data)
 
     async def _exchange(
-        self, command: Command, *, method: str, data: bytes = b""
+        self, command: Command, *, method: str, data: bytes = b"",
+        allowed_statuses: tuple[int, ...] = (0,),
     ) -> DecodedResponse:
         encrypted = encode_request(command.code, data, self.pairing_material)
         self._event(
@@ -290,7 +299,7 @@ class LafaerProtocolClient:
             checksum_valid=response.checksum_valid,
             duration_ms=round((asyncio.get_running_loop().time() - started) * 1000),
         )
-        if response.status != 0:
+        if response.status not in allowed_statuses:
             raise CoapError(f"sensor command {command.name} returned status {response.status}")
         return response
 
@@ -322,8 +331,19 @@ class LafaerProtocolClient:
         # The App defines RADAR_STATUS (0x16) but never calls it. Its active
         # radar settings page reads 0x10 and parses that GET response as the
         # full 22-byte status structure (range states plus radar metadata).
-        response = await self._exchange(Command.RADAR_RANGE, method="GET")
-        return RadarStatus.parse(response.data)
+        response = await self._exchange(
+            Command.RADAR_RANGE, method="GET", allowed_statuses=(0, 2)
+        )
+        status = RadarStatus.parse(response.data)
+        if response.status == 2:
+            # The App keeps the previous range configuration on status 2.
+            # An empty cache means unknown, never an all-enabled default.
+            return replace(
+                status, ranges=list(self._radar_ranges), ranges_valid=False,
+                status_code=2,
+            )
+        self._radar_ranges = list(status.ranges)
+        return status
 
     async def async_thresholds(self, *, keep: bool) -> RadarThresholds:
         command = Command.RADAR_KEEP_THRESHOLD if keep else Command.RADAR_DETECTION_THRESHOLD
