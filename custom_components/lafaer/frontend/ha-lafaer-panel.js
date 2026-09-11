@@ -224,6 +224,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .pir-section{margin-top:24px;padding-top:4px;border-top:1px solid var(--divider-color)}
 .threshold-column{flex:0 0 76px;min-width:76px;max-width:76px}.threshold-column>span{font-size:11px;white-space:nowrap}.threshold-column>small{font-size:12px;white-space:nowrap}.threshold-column input{padding:8px 4px;font-size:12px}.threshold-column .bar{height:130px}.threshold-grid{overscroll-behavior-x:contain}
 .radar-config>.energy-advanced{border-top:0;border-bottom:0}
+.detail-section select,.detail-section #timeout{box-sizing:border-box;height:38px;min-height:38px;padding:8px 10px;font:inherit;line-height:20px}
+.radar-config>h3,.pir-section>h3{margin:16px 0 12px}
+.radar-config>.setting-row{box-sizing:border-box;min-height:48px;padding:0}
+.radar-config>.energy-advanced{margin-top:4px}
+.energy-advanced:not([open]){padding-bottom:0}
+.energy-advanced>summary{box-sizing:border-box;min-height:48px;padding:12px 0}
+.sensing-card .detail-section:has(.energy-advanced:not([open]))>.button-row{margin-top:8px}
 .navigation-row:hover,.device:hover{background:var(--secondary-background-color)}
 .debug-content{margin:0;padding:0}.debug-content pre{box-sizing:border-box;margin:0;padding:16px;font-size:13px;max-height:calc(100vh - 180px)}
 main.busy button,main.busy ha-icon-button{pointer-events:none;opacity:.65}

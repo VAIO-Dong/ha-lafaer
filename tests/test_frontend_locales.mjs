@@ -293,6 +293,8 @@ learningPanel._dialog = async () => {learningPanel._sessionGeneration++;return t
 await learningPanel._confirmLearning();
 assert.equal(learningActions, 1, "expired sessions cannot start learning");
 assert.match(source, /const HA_LAYOUT_STYLES/);
+assert.match(source, /select,\.detail-section #timeout\{box-sizing:border-box;height:38px;min-height:38px/);
+assert.match(source, /\.radar-config>\.energy-advanced\{margin-top:4px\}/);
 assert.match(source, /height:var\(--header-height,56px\);min-height:var\(--header-height,56px\);margin:0;padding:0 20px/);
 assert.match(source, /\.cards>\.empty\{box-sizing:border-box;margin:0;padding:16px;/);
 assert.match(source, /class="navigation-row" id="open-settings"/);
