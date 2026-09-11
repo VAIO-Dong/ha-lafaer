@@ -1,5 +1,7 @@
 # ha-lafaer
 
+English | [简体中文](README.zh-CN.md)
+
 Manage Lafaer LWR01 and LWR02 presence sensors directly from Home Assistant.
 View readings, control the LED, and fine-tune detection from a dedicated sidebar
 panel.
