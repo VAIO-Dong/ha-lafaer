@@ -22,7 +22,7 @@ const WORDS = {
     temperature: "Temperature", humidity: "Humidity", workMode: "Detection Mode", controls: "Controls",
     led: "LED", identify: "Identify Device", learning: "Radar Self-Learning", settings: "Settings",
     presenceTimeout: "Presence Timeout", darkness: "Report Presence Only Below the Illuminance Threshold", darknessThreshold: "Darkness threshold",
-    save: "Save", radar: "Radar configuration", range: "Radar Range & Status", trigger: "Trigger Existence State Sensitivity", hold: "People Maintain State Sensitivity ",
+    save: "Save", radar: "Radar configuration", range: "Radar range settings", trigger: "Trigger Existence State Sensitivity", hold: "People Maintain State Sensitivity ",
     detectionThreshold: "Motion Detection Energy & Threshold", keepThreshold: "Presence Hold Energy & Threshold", advanced: "Danger zone",
     radarReset: "Reset radar parameters", factoryReset: "Reset Device", release: "Disconnect App",
     forget: "Remove from Lafaer management", dangerConfirm: "This action is destructive. Continue?", debug: "Debug", refresh: "Refresh",
@@ -70,7 +70,7 @@ const WORDS = {
     occupancy: "状态", detected: "有人", clear: "无人", illuminance: "照度", battery: "电量",
     temperature: "温度", humidity: "湿度", workMode: "工作模式", controls: "快捷控制", led: "指示灯",
     identify: "识别设备", learning: "雷达自学习", settings: "设置", presenceTimeout: "无人退出时间",
-    darkness: "仅在低照度时上报有人", darknessThreshold: "暗光阈值", save: "保存", radar: "雷达配置", range: "雷达感应范围与状态",
+    darkness: "仅在低照度时上报有人", darknessThreshold: "暗光阈值", save: "保存", radar: "雷达配置", range: "雷达感应范围设置",
     trigger: "触发有人存在状态灵敏度", hold: "保持有人存在状态灵敏度", detectionThreshold: "触发有人检测能量值及阈值", keepThreshold: "有人状态维持能量值与阈值",
     advanced: "危险操作", radarReset: "重置雷达参数", factoryReset: "重置设备", release: "断开 App 连接",
     forget: "从 Lafaer 管理中移除", dangerConfirm: "此操作具有破坏性，是否继续？", debug: "Debug", refresh: "刷新",
@@ -118,7 +118,7 @@ const WORDS = {
     occupancy: "人體存在狀態", detected: "有人", clear: "無人", illuminance: "照度", battery: "電量",
     temperature: "溫度", humidity: "濕度", workMode: "偵測模式", controls: "快速控制", led: "指示燈",
     identify: "識別裝置", learning: "雷達自我學習", settings: "設定", presenceTimeout: "無人確認時間",
-    darkness: "僅在低照度時回報有人", darknessThreshold: "暗光閾值", save: "儲存", radar: "雷達設定", range: "雷達感測範圍與狀態",
+    darkness: "僅在低照度時回報有人", darknessThreshold: "暗光閾值", save: "儲存", radar: "雷達設定", range: "雷達感測範圍設定",
     trigger: "有人觸發靈敏度", hold: "有人狀態維持靈敏度", detectionThreshold: "有人觸發能量值與閾值", keepThreshold: "有人狀態維持能量值與閾值",
     advanced: "危險操作", radarReset: "重設雷達參數", factoryReset: "重設裝置", release: "中斷 App 連線",
     forget: "從 Lafaer 管理中移除", dangerConfirm: "此操作具有破壞性，是否繼續？", debug: "Debug", refresh: "重新整理",
@@ -219,7 +219,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .cards{margin:16px -16px -16px}.cards .device{padding:16px}.cards>[role=listitem]:last-child .device{border-radius:0 0 12px 12px}
 .notification-layer{position:fixed;z-index:1000;top:calc(env(safe-area-inset-top,0px) + 16px);left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 32px));pointer-events:auto;filter:drop-shadow(0 4px 12px rgba(0,0,0,.18))}.notification-layer.enter{animation:notification-enter .2s ease-out}.notification-content{display:flex;gap:12px;align-items:center}.notification-content>span{flex:1;min-width:0;overflow-wrap:anywhere}.notification-content>ha-icon-button{flex-shrink:0}.device-name-row{display:flex;align-items:center;gap:4px;min-width:0}.device-name-row h3{min-width:0}.device-name-row ha-icon-button{flex-shrink:0;--mdc-icon-button-size:36px;--mdc-icon-size:20px}@keyframes notification-enter{from{opacity:0;transform:translate(-50%,-16px)}to{opacity:1;transform:translate(-50%,0)}}@media(prefers-reduced-motion:reduce){.notification-layer.enter{animation:none}}
 .cards>.empty{box-sizing:border-box;margin:0;padding:16px;min-height:56px;color:var(--secondary-text-color);text-align:start;overflow-wrap:anywhere}
-.detail-section label:has(>select){display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:48px;margin:4px 0}.detail-section label>select{width:auto;flex:0 1 55%;min-width:100px;max-width:65%}
+.detail-section label:has(>select),.detail-section label:has(>#timeout){display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:48px;margin:4px 0}.detail-section label>select,.detail-section label>#timeout{width:auto;flex:0 1 55%;min-width:100px;max-width:65%}
 .range-segment{box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px}.range-segment small{display:block;font-size:12px}.range-segment.occupied{background:var(--success-color,#43a047);border-color:var(--success-color,#43a047);color:var(--text-primary-color,#fff)}#range-status .range-segment.enabled:not(.occupied){background:var(--secondary-background-color);color:var(--primary-text-color);border-color:var(--divider-color)}
 .pir-section{margin-top:24px;padding-top:4px;border-top:1px solid var(--divider-color)}
 .threshold-column{flex:0 0 76px;min-width:76px;max-width:76px}.threshold-column>span{font-size:11px;white-space:nowrap}.threshold-column>small{font-size:12px;white-space:nowrap}.threshold-column input{padding:8px 4px;font-size:12px}.threshold-column .bar{height:130px}.threshold-grid{overscroll-behavior-x:contain}
@@ -337,7 +337,7 @@ class HaLafaerPanel extends HTMLElement {
   _setEnergyPolling(enabled){if(enabled&&this._energyOpen&&this._detectionTimer)return;this._energyOpen=Boolean(enabled);clearInterval(this._detectionTimer);clearInterval(this._keepTimer);this._detectionTimer=this._keepTimer=null;if(!enabled||!this._settingsPage||document.hidden||!this._viewerId||this._selected?.model!=="LWR02")return;this._readEnergy("detection_energy");this._readEnergy("keep_energy");this._detectionTimer=setInterval(()=>this._readEnergy("detection_energy"),1000);this._keepTimer=setInterval(()=>this._readEnergy("keep_energy"),5000);}
   _setRangePolling(enabled){if(enabled&&this._rangeTimer)return;clearInterval(this._rangeTimer);this._rangeTimer=null;if(!enabled||!this._settingsPage||document.hidden||!this._viewerId||this._selected?.model!=="LWR02")return;this._readRadarStatus();this._rangeTimer=setInterval(()=>this._readRadarStatus(),2000);}
   _rangeStatusConfig(status=this._snapshot?.radar_status){return this._selected?.model==="LWR02"?{states:status?.ranges_valid===false?[]:status?.ranges||[],stateLabels:{0:this.t.clear,1:this.t.detected,2:this.t.gateBlocked}}:{};}
-  async _readRadarStatus(){if(!this._settingsPage||document.hidden||!this._viewerId||this._pendingStatus)return;this._pendingStatus=true;const generation=this._sessionGeneration;try{const r=await this._hass.callWS({type:"lafaer/device/read",device_id:this._selected.device_id,kind:"sensing_status"});if(generation!==this._sessionGeneration||!this._settingsPage)return;this._snapshot={...this._snapshot,radar_status:r.values};const pir=this.shadowRoot.querySelector("#pir-state");if(pir)pir.textContent=r.values.pir_status===1?this.t.detected:this.t.clear;const radar=this.shadowRoot.querySelector("#radar-state");if(radar)radar.textContent=r.values.occupancy_status==null?"—":r.values.occupancy_status===1?this.t.detected:this.t.clear;const gates=this.shadowRoot.querySelector("#range-status");if(gates)gates.config={...this._rangeStatusConfig(r.values),values:r.values.ranges,visibleCount:8,step:.75,readOnly:true};const range=this.shadowRoot.querySelector("#range");if(range){range.inert=r.values.ranges_valid===false;range.config={...this._rangeStatusConfig(r.values),values:this._rangeDraft||r.values.ranges,visibleCount:8,step:.75,disabledValue:2,enabledValue:0};}}catch(e){if(generation===this._sessionGeneration&&this._settingsPage){this._error=this._errorText(e);this.render();}}finally{this._pendingStatus=false;}}
+  async _readRadarStatus(){if(!this._settingsPage||document.hidden||!this._viewerId||this._pendingStatus)return;this._pendingStatus=true;const generation=this._sessionGeneration;try{const r=await this._hass.callWS({type:"lafaer/device/read",device_id:this._selected.device_id,kind:"sensing_status"});if(generation!==this._sessionGeneration||!this._settingsPage)return;this._snapshot={...this._snapshot,radar_status:r.values};const pir=this.shadowRoot.querySelector("#pir-state");if(pir)pir.textContent=r.values.pir_status===1?this.t.detected:this.t.clear;const radar=this.shadowRoot.querySelector("#radar-state");if(radar)radar.textContent=r.values.occupancy_status==null?"—":r.values.occupancy_status===1?this.t.detected:this.t.clear;const gates=this.shadowRoot.querySelector("#range-status");if(gates)gates.config={...this._rangeStatusConfig(r.values),values:r.values.ranges,visibleCount:8,step:.75,readOnly:true};const range=this.shadowRoot.querySelector("#range");if(range){range.inert=r.values.ranges_valid===false;range.config={values:this._rangeDraft||r.values.ranges.map(value=>value===2?2:0),visibleCount:8,step:.75,disabledValue:2,enabledValue:0};}}catch(e){if(generation===this._sessionGeneration&&this._settingsPage){this._error=this._errorText(e);this.render();}}finally{this._pendingStatus=false;}}
   async _closeSession(){clearTimeout(this._backgroundTimer);this._backgroundTimer=null;clearInterval(this._rangeTimer);this._rangeTimer=null;this._sessionGeneration++;clearInterval(this._heartbeat);clearInterval(this._detectionTimer);clearInterval(this._keepTimer);this._heartbeat=this._detectionTimer=this._keepTimer=null;this._viewerId=null;if(this._unsub){const u=this._unsub;this._unsub=null;await u();}}
   async _onVisibility(){
     if(this._view!=="detail"||this._detached)return;
@@ -424,7 +424,7 @@ class HaLafaerPanel extends HTMLElement {
     if(q("#range-status"))q("#range-status").config={...this._rangeStatusConfig(),values:this._snapshot?.radar_status?.ranges||[],visibleCount:8,step:.75,readOnly:true};
     if(q("#range")){
       const fallback=this._selected.model==="LWR01"?(this._snapshot?.ranges?.enabled||Array(8).fill(0)):(this._snapshot?.radar_status?.ranges||Array(15).fill(0));
-      q("#range").config={...this._rangeStatusConfig(),values:this._rangeDraft||fallback,visibleCount:8,step:this._selected.model==="LWR01"?1.4:.75,disabledValue:this._selected.model==="LWR01"?0:2,enabledValue:this._selected.model==="LWR01"?1:0};
+      q("#range").config={values:this._rangeDraft||(this._selected.model==="LWR02"?fallback.map(value=>value===2?2:0):fallback),visibleCount:8,step:this._selected.model==="LWR01"?1.4:.75,disabledValue:this._selected.model==="LWR01"?0:2,enabledValue:this._selected.model==="LWR01"?1:0};
       q("#range").inert=this._snapshot?.radar_status?.ranges_valid===false;
       q("#range").addEventListener("value-changed",e=>{this._rangeDraft=e.detail.value;});
     }
