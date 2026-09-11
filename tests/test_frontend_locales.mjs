@@ -161,6 +161,16 @@ assert.equal(output.textContent, 80);
 assert.equal(reading.textContent, 80);
 assert.equal(bar.style.height, "8%");
 const rangeEditor = new RangeEditor();
+const gateView = new RangeEditor();
+gateView.config={values:[0,1,2],states:[0,1,2],stateLabels:{0:"无人",1:"有人",2:"屏蔽"},visibleCount:3,readOnly:true};
+assert.match(gateView.innerHTML, /<small>无人<\/small>/);
+assert.match(gateView.innerHTML, /<small>有人<\/small>/);
+assert.match(gateView.innerHTML, /<small>屏蔽<\/small>/);
+assert.match(gateView.innerHTML, /enabled occupied/);
+assert.doesNotMatch(gateView.innerHTML, /<button/);
+gateView.config={values:[2],states:[1],stateLabels:{1:"有人"},visibleCount:1};
+assert.equal(gateView.value[0],2,"live occupancy must not overwrite the pending mask");
+assert.match(gateView.innerHTML, /<small>有人<\/small>/);
 rangeEditor.config = {
   values: [0, 1],
   visibleCount: 2,
@@ -338,6 +348,8 @@ assert.doesNotMatch(panel._renderDetail(), /alert-type="warning"/);
 assert.match(panel._renderDetail(), /id="pir-state"/);
 assert.match(panel._renderDetail(), /class="pir-section"/);
 assert.match(panel._renderDetail(), /id="radar-state"/);
+assert.match(panel._renderDetail(), /id="range-status"/);
+assert.match(source, /label:has\(>select\)\{display:flex;align-items:center/);
 assert.match(source, /class="navigation-row" id="identify"/);
 assert.match(source, /flex:0 0 76px/);
 assert.match(source, /grid\.scrollLeft=left/);
