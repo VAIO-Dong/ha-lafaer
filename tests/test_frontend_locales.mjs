@@ -238,6 +238,7 @@ learningPanel._dialog = async () => {learningPanel._sessionGeneration++;return t
 await learningPanel._confirmLearning();
 assert.equal(learningActions, 1, "expired sessions cannot start learning");
 assert.match(source, /const HA_LAYOUT_STYLES/);
+assert.match(source, /\.cards>\.empty\{box-sizing:border-box;margin:0;padding:16px;/);
 assert.match(source, /class="navigation-row" id="open-settings"/);
 assert.match(source, /role="listitem"/);
 const panel = new Panel();

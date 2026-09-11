@@ -214,6 +214,7 @@ main>header>h1{min-width:0}main>ha-alert{display:block;margin:16px 24px}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,pre:focus-visible{outline:2px solid var(--primary-color);outline-offset:3px}
 .navigation-row:not(:last-child){margin-bottom:0;border-radius:0}
 .cards{margin:16px -16px -16px}.cards .device{padding:16px}.cards>[role=listitem]:last-child .device{border-radius:0 0 12px 12px}
+.cards>.empty{box-sizing:border-box;margin:0;padding:16px;min-height:56px;color:var(--secondary-text-color);text-align:start;overflow-wrap:anywhere}
 .pir-section{margin-top:24px;padding-top:4px;border-top:1px solid var(--divider-color)}
 .threshold-column{flex:0 0 76px;min-width:76px;max-width:76px}.threshold-column>span{font-size:11px;white-space:nowrap}.threshold-column>small{font-size:12px;white-space:nowrap}.threshold-column input{padding:8px 4px;font-size:12px}.threshold-column .bar{height:130px}.threshold-grid{overscroll-behavior-x:contain}
 .navigation-row:hover,.device:hover{background:var(--secondary-background-color)}

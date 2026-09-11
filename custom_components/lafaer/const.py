@@ -9,7 +9,7 @@ NAME: Final = "Lafaer"
 PANEL_URL: Final = "lafaer"
 PANEL_COMPONENT: Final = "ha-lafaer-panel"
 PANEL_STATIC_URL: Final = "/api/lafaer/frontend/ha-lafaer-panel.js"
-PANEL_MODULE_URL: Final = f"{PANEL_STATIC_URL}?v=0.1.17"
+PANEL_MODULE_URL: Final = f"{PANEL_STATIC_URL}?v=0.1.18"
 
 CONF_DEBUG_PERSIST: Final = "debug_persist"
 DEFAULT_DEBUG_PERSIST: Final = False
