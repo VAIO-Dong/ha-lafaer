@@ -242,9 +242,11 @@ main.busy button,main.busy ha-icon-button{pointer-events:none;opacity:.65}
 .list-layout .section-header h2{margin:0 0 6px;font-size:20px;line-height:28px}
 .list-layout .section-header p{margin:0;font-size:14px;line-height:20px;overflow-wrap:anywhere}
 .list-layout .cards{margin-top:12px}
-.list-layout .cards .device{box-sizing:border-box;padding:12px 16px;min-height:80px;gap:12px;align-items:center}
-.device .device-name-row{min-height:36px;gap:6px;align-items:center}
-.device .device-name-row h3{margin:0;font-size:16px;line-height:22px}
+.list-layout .cards .device{box-sizing:border-box;padding:8px 12px;min-height:72px;gap:8px;align-items:center}
+.list-layout .device>ha-icon{--mdc-icon-size:24px;width:24px;height:24px;margin:0;flex:0 0 24px;align-self:center}
+.device .device-name-row{min-height:32px;gap:2px;align-items:center;max-width:100%;width:fit-content}
+.device .device-name-row h3{margin:0;max-width:28ch;font-size:16px;line-height:20px;overflow-wrap:anywhere}
+.device .device-name-row ha-icon-button{--mdc-icon-button-size:32px;--mdc-icon-size:18px;width:32px;height:32px;padding:0}
 .device>div>p{margin:2px 0;font-size:13px;line-height:20px}
 .device>div>small{margin:2px 0 0;font-size:12px;line-height:18px;overflow-wrap:anywhere}
 .status-item{box-sizing:border-box;min-height:48px;align-items:center}
