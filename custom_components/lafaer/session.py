@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import secrets
+import time
 from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Any
 
@@ -306,6 +307,7 @@ class DeviceSession:
             raise ValueError(f"unsupported action: {action}")
         await methods[action]()
         if action == "start_learning" and self.device.model == "LWR02":
+            self.snapshot["learning_started_at"] = time.time()
             self.snapshot.setdefault("radar_status", {})["studying"] = 1
             self._threshold_refresh_pending = True
             self._publish()

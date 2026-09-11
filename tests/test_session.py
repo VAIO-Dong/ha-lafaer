@@ -70,6 +70,27 @@ async def test_detail_entry_always_reads_thresholds(trailing: int) -> None:
 
 
 @pytest.mark.asyncio
+async def test_learning_start_time_is_published_only_after_acceptance(monkeypatch) -> None:
+    device = StoredDevice(device_id="test", model="LWR02", host="fd00::1")
+    session = session_module.DeviceSession(FakeHass(), device, FakeStore(device), FakeDebug())
+    session.client = AsyncMock()
+    session.snapshot = {"connected": True, "status": {"work_mode": 2}}
+    session.client.async_status.return_value = DeviceStatus.parse_lwr02(bytes(11))
+    session.client.async_lwr02_config.return_value = Lwr2Config.parse(bytes(11))
+    monkeypatch.setattr(session_module.time, "time", lambda: 1234.5)
+    session.client.async_start_learning.side_effect = RuntimeError("rejected")
+    with pytest.raises(RuntimeError, match="rejected"):
+        await session.async_call("start_learning", {})
+    assert "learning_started_at" not in session.snapshot
+    session.client.async_start_learning.side_effect = None
+    await session.async_call("start_learning", {})
+    assert session.snapshot["learning_started_at"] == 1234.5
+    assert session.snapshot["radar_status"]["studying"] == 1
+    assert session._threshold_refresh_pending
+    await session.async_close()
+
+
+@pytest.mark.asyncio
 async def test_threshold_refresh_waits_for_learning_completion_and_retries() -> None:
     device = StoredDevice(device_id="test", model="LWR02", host="fd00::1")
     session = session_module.DeviceSession(FakeHass(), device, FakeStore(device), FakeDebug())

@@ -87,6 +87,8 @@ for (const label of ["Remove from Lafaer management", "从 Lafaer 管理中移�
   assert.ok(dictionarySource.includes(label));
 }
 assert.match(source, /const DETAIL_STYLES/);
+assert.match(source, /\.detail-section \.setting-row>h3\{margin:0;min-width:0;line-height:24px;overflow-wrap:anywhere\}/);
+assert.match(source, /\.energy-advanced>\.setting-row>ha-button\{flex-shrink:0;align-self:center\}/);
 assert.match(source, /if\(this\._snapshot\?\.connected!==true\)return this\._renderConnection\(\)/);
 assert.match(source, /<details id="energy-advanced"/);
 assert.match(source, /this\._setEnergyPolling\(e\.target\.open\)/);
@@ -301,6 +303,62 @@ assert.equal(confirmation.accept, learningPanel.t.adaptationStart);
 learningPanel._dialog = async () => {learningPanel._sessionGeneration++;return true;};
 await learningPanel._confirmLearning();
 assert.equal(learningActions, 1, "expired sessions cannot start learning");
+
+// Learning notifications follow device state, not a timer's assumed completion.
+const progressPanel = new Panel();
+progressPanel._hass = {language: "zh-Hans"};
+progressPanel._view = "detail";
+progressPanel._selected = {model: "LWR02", device_id: "progress"};
+let learningNow = 1000000;
+context.Date = class extends Date { static now() { return learningNow; } };
+progressPanel._snapshot = {connected: true, learning_started_at: 1000, radar_status: {studying: 1}};
+assert.equal(progressPanel._syncLearningState(), true);
+assert.equal(progressPanel._learningText(), "请在 30 秒内离开检测区域");
+assert.equal(progressPanel._syncLearningState(), false, "polls must not restart the countdown");
+let tick;
+const oldInterval = context.setInterval;
+context.setInterval = callback => {tick = callback;return 1;};
+const learningTextNode = {textContent: ""};
+progressPanel.shadowRoot.querySelector = selector => selector === "#learning-notice-text" ? learningTextNode : null;
+progressPanel.render = () => {throw new Error("countdown must not rerender the page");};
+assert.match(progressPanel._alerts(), /alert-type="info"/);
+assert.doesNotMatch(progressPanel._alerts(), /dismiss-notice/);
+learningNow += 12000;
+tick();
+assert.equal(learningTextNode.textContent, "请在 18 秒内离开检测区域");
+learningNow += 18000;
+tick();
+assert.equal(learningTextNode.textContent, progressPanel.t.learningWaiting);
+learningNow += 300000;
+assert.equal(progressPanel._learningText(), progressPanel.t.learningWaiting);
+assert.equal(progressPanel._notice, null, "elapsed time alone is not success");
+progressPanel._error = "Network error";
+assert.match(progressPanel._alerts(), /learning-notice-text/);
+assert.match(progressPanel._alerts(), /Network error/);
+progressPanel._error = null;
+progressPanel._snapshot.radar_status = {studying: 0, ranges_valid: false};
+assert.equal(progressPanel._syncLearningState(), false, "unavailable range data cannot signal completion");
+progressPanel._snapshot.radar_status.ranges_valid = true;
+assert.equal(progressPanel._syncLearningState(), true);
+assert.equal(progressPanel._notice, progressPanel.t.learningDone);
+assert.equal(progressPanel._learningTimer, null);
+assert.equal(progressPanel._syncLearningState(), false, "completion is announced once");
+let dismissSuccess;
+const oldTimeout = context.setTimeout;
+context.setTimeout = (callback, delay) => {assert.equal(delay, 5000);dismissSuccess = callback;return 1;};
+assert.match(progressPanel._alerts(), /alert-type="success"/);
+progressPanel.render = () => {};
+dismissSuccess();
+assert.equal(progressPanel._notice, null);
+context.setTimeout = oldTimeout;
+context.setInterval = oldInterval;
+delete context.Date;
+for(const language of ["en", "zh-Hans", "zh-Hant"]){
+  progressPanel._hass.language = language;
+  assert.ok(progressPanel.t.learningCountdown.includes("{time}"));
+  assert.ok(progressPanel.t.learningWaiting);
+  assert.ok(progressPanel.t.learningDone);
+}
 assert.match(source, /const HA_LAYOUT_STYLES/);
 assert.match(source, /\.device \.device-name-row h3\{margin:0;max-width:28ch;font-size:16px;line-height:20px;overflow-wrap:anywhere\}/);
 assert.match(source, /padding:8px 12px;min-height:72px;gap:8px;align-items:center/);
@@ -365,7 +423,7 @@ panel._snapshot.radar_status.ranges_valid = false;
 assert.doesNotMatch(panel._renderDetail(), /alert-type="warning"/);
 assert.match(panel._renderDetail(), /id="pir-state"/);
 assert.match(panel._renderDetail(), /class="pir-section"/);
-assert.match(panel._renderDetail(), /id="radar-state"/);
+assert.doesNotMatch(panel._renderDetail(), /id="radar-state"/);
 assert.match(panel._renderDetail(), /id="range-status"/);
 assert.match(source, /label:has\(>#timeout\)\{display:flex;align-items:center/);
 assert.doesNotMatch(source, /range\.config=\{\.\.\.this\._rangeStatusConfig/);
@@ -578,7 +636,7 @@ guardedPanel._syncSensingControls();
 assert.equal(controls.get("#radar-sensitivity").disabled,true);
 assert.equal(controls.get("#pir-sensitivity").disabled,false);
 assert.equal(controls.get("#save-mode").disabled,true);
-assert.equal(controls.get("#radar-state").textContent,guardedPanel.t.detected);
+assert.doesNotMatch(source, /#radar-state/);
 guardedPanel._workModeDraft=0;guardedPanel._syncSensingControls();
 assert.equal(controls.get("#save-mode").disabled,false);
 guardedPanel._snapshot.config={};guardedPanel._snapshot.radar_status={studying:1};guardedPanel._syncSensingControls();
@@ -595,12 +653,13 @@ assert.equal(guardedPanel._errorText({message:"pirFault"}),guardedPanel.t.pirFau
 guardedPanel._selected={model:"LWR02"};
 guardedPanel._workModeDraft=2;
 const modeMarkup=guardedPanel._renderModeSensing();
-assert.ok(modeMarkup.indexOf('id="radar-state"')<modeMarkup.indexOf('class="radar-config"'));
+assert.doesNotMatch(modeMarkup, /id="radar-state"/);
 assert.ok(modeMarkup.includes(`<p class="chart-legend">${guardedPanel.t.rangeHint}</p><lafaer-range-editor id="range">`));
 }
 
 {
 const scheduled=new Panel();
+scheduled._snapshot={connected:true};
 scheduled._selected={model:"LWR02"};scheduled._settingsPage=true;scheduled._viewerId="viewer";
 scheduled._rangePollingEnabled=true;scheduled._energyOpen=true;scheduled._pollStatusReady=false;
 scheduled._schedulePolling=()=>{};
@@ -621,6 +680,42 @@ context.document.hidden=true;scheduled._pollDue={};await scheduled._runPolling()
 assert.equal(calls.length,2,"background must not poll");context.document.hidden=false;
 scheduled._settingsPage=false;await scheduled._runPolling();assert.equal(calls.length,2);
 scheduled._stopPolling();assert.equal(scheduled._rangePollingEnabled,false);
+}
+
+{
+const reconnect=new Panel();
+reconnect._view="detail";reconnect._selected={device_id:"resume",model:"LWR02"};
+reconnect._settingsPage=true;reconnect._energyOpen=true;
+reconnect.render=()=>{};
+let callback, subscriptions=0, requests=0;
+reconnect._hass={language:"en",callWS:async()=>{requests++;},connection:{subscribeMessage:async cb=>{subscriptions++;callback=cb;cb({viewer_id:"new-viewer",connected:false});return async()=>{};}}};
+reconnect._error="old error";
+await reconnect._subscribe();
+assert.equal(reconnect._connecting,true);
+assert.equal(reconnect._error,null);
+assert.equal(reconnect._pollTimer,null);
+await reconnect._runPolling();
+await reconnect._readRadarStatus();
+await reconnect._readEnergy("detection_energy");
+assert.equal(requests,0,"no reads before sensor initialization completes");
+assert.doesNotMatch(reconnect._renderConnection(), /id="retry"/);
+await Promise.all([reconnect._retry(),reconnect._retry()]);
+assert.equal(subscriptions,1,"retry must not cancel a connection in progress");
+callback({connected:true,status:{work_mode:2},config:{}});
+assert.equal(reconnect._connecting,false);
+assert.ok(reconnect._pollTimer,"successful connection starts foreground polling");
+const stale=callback;
+await reconnect._closeSession();
+reconnect._snapshot=null;
+stale({connected:false,error:"late old-session failure"});
+assert.equal(reconnect._snapshot,null,"old subscription events cannot overwrite a new session");
+await reconnect._subscribe();
+callback({connected:false,error:"authentication failed"});
+assert.equal(reconnect._connecting,false);
+assert.match(reconnect._renderConnection(), /id="retry"/);
+await Promise.all([reconnect._retry(),reconnect._retry()]);
+assert.equal(subscriptions,3,"simultaneous retry clicks create only one new subscription");
+await reconnect._closeSession();
 }
 
 console.log("frontend locale and lifecycle checks passed");
