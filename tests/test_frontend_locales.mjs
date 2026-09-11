@@ -143,6 +143,21 @@ assert.equal(words["zh-Hans"].darkness, "仅在低照度时上报有人");
 assert.ok(words["zh-Hans"].learningTip.includes("30秒内离开检测区域"));
 
 const RangeEditor = registry.get("lafaer-range-editor");
+const Chart = registry.get("lafaer-threshold-chart");
+const energyChart = new Chart();
+const chartConfig = {values:[100], energy:[20], visibleCount:1, energyLabel:"当前"};
+energyChart.config = chartConfig;
+const oldMarkup = energyChart.innerHTML;
+const bar = {style:{}}, line = {style:{}}, output = {}, reading = {};
+energyChart.querySelectorAll = selector => selector === ".threshold-column" ? [{querySelector:selector=>({".bar i":bar,".bar b":line,"output":output,"small strong":reading})[selector]}] : [];
+const scrollContainer = {scrollLeft:137};
+energyChart.querySelector = () => scrollContainer;
+energyChart.config = {...chartConfig, energy:[80]};
+assert.equal(energyChart.innerHTML, oldMarkup, "energy-only refresh must retain DOM");
+assert.equal(scrollContainer.scrollLeft, 137);
+assert.equal(output.textContent, 80);
+assert.equal(reading.textContent, 80);
+assert.equal(bar.style.height, "8%");
 const rangeEditor = new RangeEditor();
 rangeEditor.config = {
   values: [0, 1],
@@ -254,6 +269,11 @@ assert.doesNotMatch(panel._renderDetail(), /id="identify"/);
 panel._snapshot.radar_status.ranges_valid = false;
 assert.doesNotMatch(panel._renderDetail(), /alert-type="warning"/);
 assert.match(panel._renderDetail(), /id="pir-state"/);
+assert.match(panel._renderDetail(), /class="pir-section"/);
+assert.match(panel._renderDetail(), /id="radar-state"/);
+assert.match(source, /class="navigation-row" id="identify"/);
+assert.match(source, /flex:0 0 76px/);
+assert.match(source, /grid\.scrollLeft=left/);
 assert.match(panel._renderDetail(), /<details id="energy-advanced"[^]*id="range"[^]*id="detection-chart"[^]*id="keep-chart"[^]*<\/details>/);
 assert.doesNotMatch(panel._renderDetail(), /id="range-details"/);
 assert.doesNotMatch(panel._renderDetail(), /class="button-row"><ha-button id="learning"/);
