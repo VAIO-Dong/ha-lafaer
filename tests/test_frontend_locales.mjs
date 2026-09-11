@@ -32,6 +32,7 @@ for (const key of [
   "deviceStatus",
   "modeSensing",
   "currentEnergy",
+  "keepEnergyLegend",
   "thresholdValue",
   "connectingDevice",
   "connectionFailed",
@@ -515,5 +516,14 @@ assert.deepEqual(Array.from(detectionChart.config.values),[10,11]);
 assert.deepEqual(Array.from(keepChart.config.values),[55,51]);
 assert.equal(sensitivityPanel._snapshot.config.radar_sensitivity,0);
 assert.deepEqual(sensitivityPanel._snapshot.keep_thresholds.low,[50,51]);
+
+for(const language of ["en","zh-Hans","zh-Hant"]){
+  sensitivityPanel._hass.language=language;
+  sensitivityPanel._refreshThresholdCharts();
+  assert.equal(keepChart.config.legend,sensitivityPanel.t.keepEnergyLegend);
+  assert.equal(detectionChart.config.legend,sensitivityPanel.t.energyLegend);
+  assert.ok(keepChart.config.legend.startsWith(detectionChart.config.legend));
+  assert.ok(keepChart.config.legend.length>detectionChart.config.legend.length);
+}
 
 console.log("frontend locale and lifecycle checks passed");

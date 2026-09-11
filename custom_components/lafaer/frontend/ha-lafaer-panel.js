@@ -45,7 +45,7 @@ const WORDS = {
     unknownError: "Takeover failed. Try again or download diagnostics.",
     moreActions: "More actions", deviceStatus: "Device status", deviceControls: "Device controls", modeSensing: "Mode & Sensing",
     advancedSettings: "Advanced Settings",
-    currentEnergy: "Current", thresholdValue: "Threshold", energyLegend: "Bar: current energy · Line: configured threshold", close: "Close",
+    currentEnergy: "Current", thresholdValue: "Threshold", energyLegend: "Bar: current energy · Line: configured threshold", keepEnergyLegend: "Bar: current energy · Line: configured threshold · Radar data becomes available after the radar has been running for a while.", close: "Close",
     connectingDevice: "Connecting to device", connectingHint: "Connecting through the Home Assistant IPv6 network.", connectionFailed: "Unable to connect", connectionFailedHint: "Check that Home Assistant can reach the Thread Border Router and sensor over IPv6, then try again.", retry: "Retry",
     radarUnavailable: "Distance settings are temporarily unavailable. Other device information is still available.", radarConfiguration: "Radar configuration", pirStatus: "PIR Status", energyAdvanced: "Radar advanced settings"
   },
@@ -93,7 +93,7 @@ const WORDS = {
     unknownError: "接管失败，请重试或下载诊断信息。",
     moreActions: "更多功能", deviceStatus: "设备状态", deviceControls: "设备控制", modeSensing: "工作模式与感应",
     advancedSettings: "高级设置",
-    currentEnergy: "当前", thresholdValue: "阈值", energyLegend: "柱形：当前能量 · 横线：设定阈值", close: "关闭",
+    currentEnergy: "当前", thresholdValue: "阈值", energyLegend: "柱形：当前能量 · 横线：设定阈值", keepEnergyLegend: "柱形：当前能量 · 横线：设定阈值 · 雷达运行一段时间后，才可获取相应数据。", close: "关闭",
     connectingDevice: "正在连接设备", connectingHint: "正在通过 Home Assistant 的 IPv6 网络连接。", connectionFailed: "无法连接设备", connectionFailedHint: "请检查 Home Assistant 到 Thread 边界路由器和传感器的 IPv6 网络是否连通，然后重试。", retry: "重试",
     radarUnavailable: "距离设置暂不可用，其他设备信息仍可查看。", radarConfiguration: "雷达配置", pirStatus: "红外感应状态", energyAdvanced: "雷达高级设置"
   },
@@ -141,7 +141,7 @@ const WORDS = {
     unknownError: "接管失敗，請重試或下載診斷資訊。",
     moreActions: "更多功能", deviceStatus: "裝置狀態", deviceControls: "裝置控制", modeSensing: "運作模式與感測",
     advancedSettings: "進階設定",
-    currentEnergy: "目前", thresholdValue: "閾值", energyLegend: "柱形：目前能量 · 橫線：設定閾值", close: "關閉",
+    currentEnergy: "目前", thresholdValue: "閾值", energyLegend: "柱形：目前能量 · 橫線：設定閾值", keepEnergyLegend: "柱形：目前能量 · 橫線：設定閾值 · 雷達運作一段時間後，才可取得相應資料。", close: "關閉",
     connectingDevice: "正在連線裝置", connectingHint: "正在透過 Home Assistant 的 IPv6 網路連線。", connectionFailed: "無法連線裝置", connectionFailedHint: "請檢查 Home Assistant 到 Thread 邊界路由器和感測器的 IPv6 網路是否連通，然後重試。", retry: "重試",
     radarUnavailable: "距離設定暫不可用，其他裝置資訊仍可查看。", radarConfiguration: "雷達設定", pirStatus: "PIR 感測狀態", energyAdvanced: "雷達進階設定"
   }
@@ -363,10 +363,10 @@ class HaLafaerPanel extends HTMLElement {
   _applySnapshot(event){const previous=this._snapshot;this._snapshot={...(previous||{}),...event};if(event.viewer_id)this._viewerId=event.viewer_id;if(document.hidden||this._pageClosing)return;const unchanged=previous?.connected===true&&this._snapshot.connected===true&&previous.error===this._snapshot.error&&previous.status?.work_mode===this._snapshot.status?.work_mode&&JSON.stringify(previous.config)===JSON.stringify(this._snapshot.config);if(this._settingsPage&&unchanged)return;const active=this.shadowRoot.activeElement;if(!active||!["INPUT","SELECT"].includes(active.tagName))this.render();}
   _capturePageScroll(){const positions=[];let element=this;while(element){if(element.scrollTop||element.scrollLeft)positions.push([element,element.scrollTop,element.scrollLeft]);element=element.parentElement||element.getRootNode?.()?.host;}const page=document.scrollingElement;if(page&&!positions.some(([node])=>node===page))positions.push([page,page.scrollTop,page.scrollLeft]);return positions;}
   _thresholdValues(keep=false){const mode=Number(this._radarDraft??this._snapshot?.config?.radar_sensitivity??0),key=keep?"keep_thresholds":"detection_thresholds";return (mode===3?(keep?this._keepDraft:this._detectionDraft):null)||this._snapshot?.[key]?.[["low","medium","high","custom"][mode]]||[];}
-  _refreshThresholdCharts(){for(const keep of [false,true]){const chart=this.shadowRoot.querySelector(keep?"#keep-chart":"#detection-chart");if(chart)chart.config={values:this._thresholdValues(keep),energy:this._snapshot?.[keep?"keep_energy":"detection_energy"],visibleCount:8,energyLabel:this.t.currentEnergy,thresholdLabel:this.t.thresholdValue,legend:this.t.energyLegend};}}
+  _refreshThresholdCharts(){for(const keep of [false,true]){const chart=this.shadowRoot.querySelector(keep?"#keep-chart":"#detection-chart");if(chart)chart.config={values:this._thresholdValues(keep),energy:this._snapshot?.[keep?"keep_energy":"detection_energy"],visibleCount:8,energyLabel:this.t.currentEnergy,thresholdLabel:this.t.thresholdValue,legend:keep?this.t.keepEnergyLegend:this.t.energyLegend};}}
   _selectRadarSensitivity(value){this._radarDraft=Number(value);this._refreshThresholdCharts();}
   _editThresholds(keep,values){const detection=[...this._thresholdValues(false)],presence=[...this._thresholdValues(true)];this._detectionDraft=keep?detection:[...values];this._keepDraft=keep?[...values]:presence;this._radarDraft=3;const field=this.shadowRoot.querySelector("#radar-sensitivity");if(field)field.value="3";this._refreshThresholdCharts();}
-  async _readEnergy(kind){if(document.hidden||!this._viewerId||!this._settingsPage||!this._energyOpen||this._snapshot?.status?.work_mode===0||Number(this._workModeDraft)===0&&this._workModeDraft!=null)return;const pendingKey=`_pending_${kind}`;if(this[pendingKey])return;this[pendingKey]=true;const generation=this._sessionGeneration;try{const r=await this._hass.callWS({type:"lafaer/device/read",device_id:this._selected.device_id,kind});if(generation!==this._sessionGeneration||!this._settingsPage||!this._energyOpen)return;this._snapshot={...(this._snapshot||{}),[kind]:r.values};const chart=this.shadowRoot.querySelector(kind==="detection_energy"?"#detection-chart":"#keep-chart");if(chart){chart.config={values:this._thresholdValues(kind==="keep_energy"),energy:r.values,visibleCount:8,energyLabel:this.t.currentEnergy,thresholdLabel:this.t.thresholdValue,legend:this.t.energyLegend};}}catch(e){if(generation===this._sessionGeneration&&this._settingsPage&&this._energyOpen){this._error=this._errorText(e);this.render();}}finally{this[pendingKey]=false;}}
+  async _readEnergy(kind){if(document.hidden||!this._viewerId||!this._settingsPage||!this._energyOpen||this._snapshot?.status?.work_mode===0||Number(this._workModeDraft)===0&&this._workModeDraft!=null)return;const pendingKey=`_pending_${kind}`;if(this[pendingKey])return;this[pendingKey]=true;const generation=this._sessionGeneration;try{const r=await this._hass.callWS({type:"lafaer/device/read",device_id:this._selected.device_id,kind});if(generation!==this._sessionGeneration||!this._settingsPage||!this._energyOpen)return;this._snapshot={...(this._snapshot||{}),[kind]:r.values};const chart=this.shadowRoot.querySelector(kind==="detection_energy"?"#detection-chart":"#keep-chart");if(chart){chart.config={values:this._thresholdValues(kind==="keep_energy"),energy:r.values,visibleCount:8,energyLabel:this.t.currentEnergy,thresholdLabel:this.t.thresholdValue,legend:kind==="keep_energy"?this.t.keepEnergyLegend:this.t.energyLegend};}}catch(e){if(generation===this._sessionGeneration&&this._settingsPage&&this._energyOpen){this._error=this._errorText(e);this.render();}}finally{this[pendingKey]=false;}}
   _setEnergyPolling(enabled){if(enabled&&this._energyOpen&&this._detectionTimer)return;this._energyOpen=Boolean(enabled);clearInterval(this._detectionTimer);clearInterval(this._keepTimer);this._detectionTimer=this._keepTimer=null;if(!enabled||!this._settingsPage||document.hidden||!this._viewerId||this._selected?.model!=="LWR02")return;this._readEnergy("detection_energy");this._readEnergy("keep_energy");this._detectionTimer=setInterval(()=>this._readEnergy("detection_energy"),1000);this._keepTimer=setInterval(()=>this._readEnergy("keep_energy"),5000);}
   _setRangePolling(enabled){if(enabled&&this._rangeTimer)return;clearInterval(this._rangeTimer);this._rangeTimer=null;if(!enabled||!this._settingsPage||document.hidden||!this._viewerId||this._selected?.model!=="LWR02")return;this._readRadarStatus();this._rangeTimer=setInterval(()=>this._readRadarStatus(),2000);}
   _rangeStatusConfig(status=this._snapshot?.radar_status){return this._selected?.model==="LWR02"?{states:status?.ranges_valid===false?[]:status?.ranges||[],stateLabels:{0:this.t.clear,1:this.t.detected,2:this.t.gateBlocked}}:{};}
@@ -466,7 +466,7 @@ class HaLafaerPanel extends HTMLElement {
       q("#detection-chart").addEventListener("value-changed",e=>this._editThresholds(false,e.detail.value));
     }
     if(q("#keep-chart")){
-      q("#keep-chart").config={values:this._thresholdValues(true),energy:this._snapshot?.keep_energy,visibleCount:8,energyLabel:this.t.currentEnergy,thresholdLabel:this.t.thresholdValue,legend:this.t.energyLegend};
+      q("#keep-chart").config={values:this._thresholdValues(true),energy:this._snapshot?.keep_energy,visibleCount:8,energyLabel:this.t.currentEnergy,thresholdLabel:this.t.thresholdValue,legend:this.t.keepEnergyLegend};
       q("#keep-chart").addEventListener("value-changed",e=>this._editThresholds(true,e.detail.value));
     }
     if(q("#range-details"))q("#range-details").ontoggle=e=>{this._rangeOpen=e.target.open;};
