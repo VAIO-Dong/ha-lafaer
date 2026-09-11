@@ -28,6 +28,36 @@ def test_lwr02_command_names_do_not_alias_lwr01() -> None:
 
 
 @pytest.mark.asyncio
+async def test_all_commands_are_serialized_and_paced_even_after_failure() -> None:
+    client = LafaerProtocolClient("fd00::1", "pairing", model="LWR02")
+    timestamps = []
+
+    async def exchange(*args, **kwargs):
+        timestamps.append(asyncio.get_running_loop().time())
+        if len(timestamps) == 1:
+            raise CoapError("temporary failure")
+        return DecodedResponse(0, b"", 0, True)
+
+    client._exchange_now = exchange
+    results = await asyncio.gather(
+        client._exchange(Command.RADAR_ACTIVE, method="POST"),
+        client._exchange(Command.RADAR_RANGE, method="GET"),
+        client._exchange(Command.STATUS_LWR02, method="GET"),
+        return_exceptions=True,
+    )
+    assert isinstance(results[0], CoapError)
+    assert len(timestamps) == 3
+    assert all(
+        later - earlier >= 0.14
+        for earlier, later in zip(timestamps, timestamps[1:], strict=False)
+    )
+    await client.async_close()
+    with pytest.raises(CoapError, match="closed"):
+        await client._exchange(Command.STATUS_LWR02, method="GET")
+    assert len(timestamps) == 3
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("size", [0, 28, 32])
 async def test_energy_rejects_incomplete_gate_data(size: int) -> None:
     client = LafaerProtocolClient("fd00::1", "pairing", model="LWR02")

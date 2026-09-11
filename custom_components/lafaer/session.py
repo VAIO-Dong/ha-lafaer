@@ -191,6 +191,10 @@ class DeviceSession:
                     continue
                 try:
                     async with self._radar_read_lock:
+                        if self._closed or not self.viewers:
+                            break
+                        if self._background_viewers.issuperset(self.viewers):
+                            continue
                         status = await self.client.async_status()
                     self.snapshot.update(
                         connected=True, status=status.as_dict(), error=None
@@ -413,6 +417,8 @@ class DeviceSession:
         async with self._radar_read_lock:
             if self._closed or not self.snapshot.get("connected"):
                 raise RuntimeError("device is not connected")
+            if self.viewers and self._background_viewers.issuperset(self.viewers):
+                raise RuntimeError("device page is in background")
             mode = self.snapshot.get("status", {}).get("work_mode")
             if mode not in (1, 2) and not (mode == 0 and kind == "sensing_status"):
                 raise ValueError("radar data is unavailable in the current mode")
@@ -422,6 +428,8 @@ class DeviceSession:
                 radar = self.snapshot.get("radar_status", {})
                 if radar.get("studying") == 1:
                     raise ValueError("learningRunning")
+                if radar.get("ranges_valid") is False:
+                    return {"kind": kind, "available": False}
             now = asyncio.get_running_loop().time()
             if mode == 2 and (
                 self._radar_active_at is None or now - self._radar_active_at >= 20

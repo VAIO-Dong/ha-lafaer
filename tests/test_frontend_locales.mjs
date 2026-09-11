@@ -380,9 +380,10 @@ assert.match(panel._renderDetail(), /<details id="energy-advanced"[^]*id="range"
 assert.doesNotMatch(panel._renderDetail(), /id="range-details"/);
 assert.doesNotMatch(panel._renderDetail(), /class="button-row"><ha-button id="learning"/);
 assert.match(panel._renderDetail(), /data-danger="radar_reset"[^]*id="detection-chart"/);
-assert.match(source, /this\._readEnergy\("detection_energy"\),1000/);
-assert.match(source, /this\._readEnergy\("keep_energy"\),5000/);
-assert.match(source, /this\._readRadarStatus\(\),2000/);
+assert.match(source, /\["detection_energy",1000\]/);
+assert.match(source, /\["keep_energy",5000\]/);
+assert.doesNotMatch(source, /setInterval\(\(\)=>this\._readEnergy/);
+assert.match(source, /\["sensing_status",2000\]/);
 panel._settingsPage = false;
 panel._selected.model = "LWR01";
 panel._snapshot.status = {power_type: 2, battery_level: 100};
@@ -596,6 +597,30 @@ guardedPanel._workModeDraft=2;
 const modeMarkup=guardedPanel._renderModeSensing();
 assert.ok(modeMarkup.indexOf('id="radar-state"')<modeMarkup.indexOf('class="radar-config"'));
 assert.ok(modeMarkup.includes(`<p class="chart-legend">${guardedPanel.t.rangeHint}</p><lafaer-range-editor id="range">`));
+}
+
+{
+const scheduled=new Panel();
+scheduled._selected={model:"LWR02"};scheduled._settingsPage=true;scheduled._viewerId="viewer";
+scheduled._rangePollingEnabled=true;scheduled._energyOpen=true;scheduled._pollStatusReady=false;
+scheduled._schedulePolling=()=>{};
+const calls=[];let releaseStatus;
+scheduled._readRadarStatus=async()=>{calls.push("status");await new Promise(resolve=>{releaseStatus=resolve;});scheduled._pollStatusReady=true;};
+scheduled._readEnergy=async kind=>{calls.push(kind);};
+const pending=scheduled._runPolling();
+await scheduled._runPolling();
+assert.deepEqual(calls,["status"],"only one radar query may be outstanding");
+scheduled._energyOpen=false;releaseStatus();await pending;
+await scheduled._runPolling();
+assert.deepEqual(calls,["status"],"collapsing while a request is pending must not enqueue energy reads");
+scheduled._energyOpen=true;await scheduled._runPolling();
+assert.deepEqual(calls,["status","detection_energy"]);
+scheduled._pollStatusReady=false;await scheduled._runPolling();
+assert.equal(calls.length,2,"unready radar must not receive energy requests");
+context.document.hidden=true;scheduled._pollDue={};await scheduled._runPolling();
+assert.equal(calls.length,2,"background must not poll");context.document.hidden=false;
+scheduled._settingsPage=false;await scheduled._runPolling();assert.equal(calls.length,2);
+scheduled._stopPolling();assert.equal(scheduled._rangePollingEnabled,false);
 }
 
 console.log("frontend locale and lifecycle checks passed");

@@ -25,6 +25,26 @@ class FakeHass:
 
 
 @pytest.mark.asyncio
+async def test_background_and_unready_radar_do_not_send_energy_commands() -> None:
+    device = StoredDevice(device_id="test", model="LWR02", host="fd00::1")
+    session = session_module.DeviceSession(FakeHass(), device, FakeStore(device), FakeDebug())
+    session.client = AsyncMock()
+    session.snapshot = {
+        "connected": True, "status": {"work_mode": 2},
+        "radar_status": {"ranges_valid": False},
+    }
+    viewer = session.add_viewer(lambda event: None)
+    result = await session.async_read("detection_energy")
+    assert result["available"] is False
+    assert not session.client.mock_calls
+    session.heartbeat(viewer, background=True)
+    with pytest.raises(RuntimeError, match="background"):
+        await session.async_read("sensing_status")
+    assert not session.client.mock_calls
+    await session.async_close()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("trailing", [0, 1, 255])
 async def test_detail_entry_always_reads_thresholds(trailing: int) -> None:
     device = StoredDevice(device_id="test", model="LWR02", host="fd00::1", pairing_material="key")

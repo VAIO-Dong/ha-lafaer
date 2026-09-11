@@ -263,12 +263,35 @@ class LafaerProtocolClient:
         self._debug = debug
         self._strict_checksum = strict_checksum
         self._radar_ranges: list[int] = []
+        self._command_lock = asyncio.Lock()
+        self._last_command_at: float | None = None
+        self._closed = False
 
     def _event(self, event: str, **data: Any) -> None:
         if self._debug is not None:
             self._debug(event, data)
 
     async def _exchange(
+        self, command: Command, *, method: str, data: bytes = b"",
+        allowed_statuses: tuple[int, ...] = (0,),
+    ) -> DecodedResponse:
+        # Pace every command, including failed reads, activation and writes.
+        # Log requests only after acquiring the actual sending slot.
+        async with self._command_lock:
+            if self._last_command_at is not None:
+                delay = 0.15 - (asyncio.get_running_loop().time() - self._last_command_at)
+                if delay > 0:
+                    await asyncio.sleep(delay)
+            if self._closed:
+                raise CoapError("transport is closed")
+            try:
+                return await self._exchange_now(
+                    command, method=method, data=data, allowed_statuses=allowed_statuses
+                )
+            finally:
+                self._last_command_at = asyncio.get_running_loop().time()
+
+    async def _exchange_now(
         self, command: Command, *, method: str, data: bytes = b"",
         allowed_statuses: tuple[int, ...] = (0,),
     ) -> DecodedResponse:
@@ -506,4 +529,5 @@ class LafaerProtocolClient:
         await self._exchange(Command.DELETE_DEVICE, method="POST")
 
     async def async_close(self) -> None:
+        self._closed = True
         await self._transport.async_close()
