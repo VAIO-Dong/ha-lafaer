@@ -3,8 +3,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Lafaer",
-        "description": "Adds the on-demand Lafaer management panel. Devices are only contacted while their detail page is open."
+        "title": "Lafaer · Settings",
+        "description": "View sensor status and manage Lafaer devices."
       }
     },
     "abort": {
@@ -14,7 +14,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Lafaer options",
+        "title": "Lafaer · Settings",
         "data": {
           "debug_persist": "Persist rotating debug logs"
         },

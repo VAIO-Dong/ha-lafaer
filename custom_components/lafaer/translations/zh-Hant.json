@@ -3,8 +3,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "設定 Lafaer",
-        "description": "新增按需使用的 Lafaer 管理面板。只有在裝置詳細資料頁開啟時才會連線裝置。"
+        "title": "Lafaer · 設定",
+        "description": "查看感測器狀態並管理 Lafaer 裝置。"
       }
     },
     "abort": {
@@ -14,7 +14,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Lafaer 選項",
+        "title": "Lafaer · 設定",
         "data": {
           "debug_persist": "保存輪替 debug 日誌"
         },

@@ -3,8 +3,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "设置 Lafaer",
-        "description": "添加按需使用的 Lafaer 管理面板。只有设备详情页打开时才会连接设备。"
+        "title": "Lafaer · 设置",
+        "description": "查看传感器状态并管理 Lafaer 设备。"
       }
     },
     "abort": {
@@ -14,7 +14,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Lafaer 选项",
+        "title": "Lafaer · 设置",
         "data": {
           "debug_persist": "保存轮转 debug 日志"
         },

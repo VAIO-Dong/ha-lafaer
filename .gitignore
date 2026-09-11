@@ -3,6 +3,7 @@ __pycache__/
 
 # Private reference application and internal design notes must never ship.
 /gl_senser/
+/多语言/
 /docs/
 
 # Local development and test artifacts.
