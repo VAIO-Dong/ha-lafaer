@@ -243,7 +243,8 @@ main.busy button,main.busy ha-icon-button{pointer-events:none;opacity:.65}
 .list-layout .section-header p{margin:0;font-size:14px;line-height:20px;overflow-wrap:anywhere}
 .list-layout .cards{margin-top:12px}
 .list-layout .cards .device{box-sizing:border-box;padding:8px 12px;min-height:72px;gap:8px;align-items:center}
-.list-layout .device>ha-icon{--mdc-icon-size:24px;width:24px;height:24px;margin:0;flex:0 0 24px;align-self:center}
+.list-layout .device>ha-icon{--mdc-icon-size:24px;box-sizing:border-box;width:72px;height:72px;margin:0;flex:0 0 72px;align-self:center}
+.list-layout .device>div{flex:1 1 180px;min-width:0}
 .device .device-name-row{min-height:32px;gap:2px;align-items:center;max-width:100%;width:fit-content}
 .device .device-name-row h3{margin:0;max-width:28ch;font-size:16px;line-height:20px;overflow-wrap:anywhere}
 .device .device-name-row ha-icon-button{--mdc-icon-button-size:32px;--mdc-icon-size:18px;width:32px;height:32px;padding:0}

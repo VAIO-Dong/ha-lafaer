@@ -1,5 +1,7 @@
 # ha-lafaer
 
+<img src="assets/logo.svg" alt="Lafaer" width="240">
+
 Open-source, local-only Home Assistant management panel for Lafaer LWR01 and
 LWR02 presence sensors.
 
