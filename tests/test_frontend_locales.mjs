@@ -127,7 +127,7 @@ const context = {
   setInterval: () => 1,
   clearInterval: () => {},
   HTMLElement: FakeHTMLElement,
-  CustomEvent: class {},
+  CustomEvent: class {constructor(type,options){this.type=type;Object.assign(this,options);}},
   customElements: {
     define: (name, constructor) => registry.set(name, constructor),
     get: (name) => registry.get(name),
@@ -172,6 +172,27 @@ assert.deepEqual([...rangeEditor.value], [1, 1]);
 assert.match(rangeEditor.innerHTML, /range-segment enabled/);
 
 const Panel = registry.get("ha-lafaer-panel");
+const sidebarPanel = new Panel();
+sidebarPanel._hass = {language:"zh-Hans"};
+let sidebarEvent;
+const sidebarButton = {tagName:"HA-ICON-BUTTON"};
+sidebarPanel.shadowRoot.querySelector = selector => selector === "#sidebar-menu" ? sidebarButton : null;
+sidebarPanel.dispatchEvent = event => {sidebarEvent=event;};
+sidebarPanel._bindSidebar();
+sidebarButton.onclick();
+assert.equal(sidebarEvent.type,"hass-toggle-menu");
+assert.equal(sidebarEvent.bubbles,true);
+assert.equal(sidebarEvent.composed,true);
+sidebarButton.tagName="HA-MENU-BUTTON";
+sidebarPanel.narrow=true;
+assert.equal(sidebarButton.narrow,true);
+assert.equal(sidebarButton.hass,sidebarPanel._hass);
+sidebarPanel.narrow=false;
+assert.equal(sidebarButton.narrow,false);
+assert.match(sidebarPanel._renderList(),/id="sidebar-menu"/);
+sidebarPanel._selected={name:"Test"};
+assert.match(sidebarPanel._detailHeader(),/id="sidebar-menu"/);
+assert.match(sidebarPanel._debugView(),/id="sidebar-menu"/);
 const actionPanel = new Panel();
 actionPanel._hass = {language: "en"};
 actionPanel._selected = {name: "Test", device_id: "test"};
