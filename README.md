@@ -68,6 +68,19 @@ The sensor stores only one management key. Taking it over in Home Assistant
 replaces the App key. Pairing it with the App again invalidates the Home
 Assistant key and requires another takeover.
 
+## Logs
+
+Lafaer logs use the `custom_components.lafaer` logger in **Settings → System →
+Logs → Home Assistant Core**. Warnings and errors appear in the standard log
+view. For protocol details, select **Enable debug logging** from the Lafaer
+integration menu in **Settings → Devices & services**, reproduce the issue,
+then disable debug logging to download the log.
+
+The system log source picker lists Core, Supervisor and installed Apps/Add-ons;
+HACS integrations cannot add a separate source there. The panel's Debug view
+and optional persistent recording remain available. Protocol logs redact
+management keys and device identifiers.
+
 ## Development
 
 The backend targets Home Assistant 2024.12 or later and Python 3.12 or later.

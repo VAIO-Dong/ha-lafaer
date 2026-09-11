@@ -41,7 +41,8 @@ def _assert_rotations_removed(log_path: Path) -> None:
         assert not Path(f"{log_path}{suffix}").exists()
 
 
-def test_debug_events_are_recursively_redacted(tmp_path: Path) -> None:
+def test_debug_events_are_recursively_redacted(tmp_path: Path, caplog) -> None:
+    caplog.set_level("DEBUG", logger="custom_components.lafaer.debug")
     debug = DebugBuffer(FakeHass(tmp_path))
     debug.add(
         "protocol",
@@ -69,6 +70,9 @@ def test_debug_events_are_recursively_redacted(tmp_path: Path) -> None:
     assert "goodlife" not in error
     assert "0123456789abcdef" not in error
     assert event["data"]["raw"] == "<12 bytes>"
+    assert "AABBCCDDEEFF" not in caplog.text
+    assert "goodlife--00beef" not in caplog.text
+    assert "[redacted]" in caplog.text
 
 
 def test_exception_summary_keeps_empty_exception_useful() -> None:

@@ -141,7 +141,7 @@ class DebugBuffer:
             except asyncio.QueueFull:
                 _LOGGER.warning("Lafaer persistent debug queue is full; dropping an event")
         log_method = getattr(_LOGGER, level, _LOGGER.debug)
-        log_method("%s: %s %s", category, message, event.data)
+        log_method("%s: %s %s", category, event.message, event.data)
 
     def protocol_callback(self, event: str, data: dict[str, Any]) -> None:
         """Receive metadata-only events from a protocol client."""

@@ -149,7 +149,10 @@ class DeviceSession:
             self.debug.add("lifecycle", "device session opened")
         except Exception as err:
             self.snapshot.update(connected=False, error=str(err))
-            self.debug.add("lifecycle", "device session initialization failed", error=str(err))
+            self.debug.add(
+                "lifecycle", "device session initialization failed",
+                level="error", data={"error": str(err)},
+            )
         finally:
             self._ready.set()
             self._publish()
@@ -310,12 +313,15 @@ class DeviceSession:
                 await self.client.async_set_radar_range(
                     self._validated_radar_ranges(data["ranges"])
                 )
-            await self.client.async_set_thresholds(
-                [int(value) for value in data["detection_thresholds"]], keep=False
-            )
-            await self.client.async_set_thresholds(
-                [int(value) for value in data["keep_thresholds"]], keep=True
-            )
+            # Writing thresholds switches the firmware to custom sensitivity.
+            # Preset modes use the device's own low/medium/high tables.
+            if int(data["radar_sensitivity"]) == 3:
+                await self.client.async_set_thresholds(
+                    [int(value) for value in data["detection_thresholds"]], keep=False
+                )
+                await self.client.async_set_thresholds(
+                    [int(value) for value in data["keep_thresholds"]], keep=True
+                )
 
     def _validated_radar_ranges(self, values: list[int]) -> list[int]:
         """Prevent replacing unknown distance settings after a radar error."""

@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from custom_components.lafaer.protocol import client as client_module
 from custom_components.lafaer.protocol.client import (
     CoapError,
     CoapTransport,
@@ -15,6 +16,26 @@ from custom_components.lafaer.protocol.client import (
 )
 from custom_components.lafaer.protocol.codec import DecodedResponse
 from custom_components.lafaer.protocol.commands import Command
+
+
+@pytest.mark.asyncio
+async def test_rejected_command_emits_error_event(monkeypatch) -> None:
+    events = []
+    client = LafaerProtocolClient(
+        "fd00::1", "pairing", model="LWR02",
+        debug=lambda event, data: events.append((event, data)),
+    )
+    client._transport.async_request = AsyncMock(return_value=b"response")
+    monkeypatch.setattr(
+        client_module, "decode_response",
+        lambda *args, **kwargs: DecodedResponse(1, b"", 0, True),
+    )
+    with pytest.raises(CoapError, match="RADAR_DETECTION_VALUE returned status 1"):
+        await client.async_energy(keep=False)
+    assert events[-1][0] == "error"
+    assert events[-1][1]["command"] == "RADAR_DETECTION_VALUE"
+    assert events[-1][1]["status"] == 1
+    await client.async_close()
 
 
 @pytest.mark.asyncio

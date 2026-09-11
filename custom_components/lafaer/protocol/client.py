@@ -300,7 +300,9 @@ class LafaerProtocolClient:
             duration_ms=round((asyncio.get_running_loop().time() - started) * 1000),
         )
         if response.status not in allowed_statuses:
-            raise CoapError(f"sensor command {command.name} returned status {response.status}")
+            error = f"sensor command {command.name} returned status {response.status}"
+            self._event("error", command=command.name, status=response.status, error=error)
+            raise CoapError(error)
         return response
 
     async def async_authenticate(self, uid: str) -> str:

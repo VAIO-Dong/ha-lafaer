@@ -490,4 +490,30 @@ for(const language of ["en","zh-Hans","zh-Hant"]){
   assert.match(panel.t.connectionFailedHint,/IPv6/);
 }
 
+const sensitivityPanel = new Panel();
+sensitivityPanel._hass = {language:"en"};
+const sensitivityField = {value:"0"}, detectionChart = {}, keepChart = {};
+sensitivityPanel.shadowRoot.querySelector = selector => ({"#radar-sensitivity":sensitivityField,"#detection-chart":detectionChart,"#keep-chart":keepChart}[selector]||null);
+sensitivityPanel._snapshot = {config:{radar_sensitivity:0},detection_thresholds:{low:[10,11],medium:[20,21],high:[30,31],custom:[40,41]},keep_thresholds:{low:[50,51],medium:[60,61],high:[70,71],custom:[80,81]}};
+for(const [mode,key] of [[0,"low"],[1,"medium"],[2,"high"],[3,"custom"]]){
+  sensitivityPanel._selectRadarSensitivity(mode);
+  assert.deepEqual(detectionChart.config.values,sensitivityPanel._snapshot.detection_thresholds[key]);
+  assert.deepEqual(keepChart.config.values,sensitivityPanel._snapshot.keep_thresholds[key]);
+}
+sensitivityPanel._selectRadarSensitivity(1);
+sensitivityPanel._editThresholds(false,[22,21]);
+assert.equal(sensitivityField.value,"3");
+assert.deepEqual(Array.from(detectionChart.config.values),[22,21]);
+assert.deepEqual(Array.from(keepChart.config.values),[60,61]);
+sensitivityPanel._selectRadarSensitivity(2);
+assert.deepEqual(Array.from(detectionChart.config.values),[30,31]);
+sensitivityPanel._selectRadarSensitivity(3);
+assert.deepEqual(Array.from(detectionChart.config.values),[22,21]);
+sensitivityPanel._selectRadarSensitivity(0);
+sensitivityPanel._editThresholds(true,[55,51]);
+assert.deepEqual(Array.from(detectionChart.config.values),[10,11]);
+assert.deepEqual(Array.from(keepChart.config.values),[55,51]);
+assert.equal(sensitivityPanel._snapshot.config.radar_sensitivity,0);
+assert.deepEqual(sensitivityPanel._snapshot.keep_thresholds.low,[50,51]);
+
 console.log("frontend locale and lifecycle checks passed");

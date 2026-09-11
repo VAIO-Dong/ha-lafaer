@@ -299,8 +299,11 @@ async def test_old_unsubscribe_does_not_remove_replacement_session(manager) -> N
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("work_mode", [0, 1])
-async def test_lwr02_mode_save_only_writes_active_sensor_settings(work_mode: int) -> None:
+@pytest.mark.parametrize("work_mode", [0, 1, 2])
+@pytest.mark.parametrize("sensitivity", [0, 1, 2, 3])
+async def test_lwr02_mode_save_only_writes_active_sensor_settings(
+    work_mode: int, sensitivity: int,
+) -> None:
     device = StoredDevice(
         device_id="lwr2",
         model="LWR02",
@@ -324,7 +327,7 @@ async def test_lwr02_mode_save_only_writes_active_sensor_settings(work_mode: int
             "presence_timeout": 30,
             "work_mode": work_mode,
             "pir_sensitivity": 2,
-            "radar_sensitivity": 3,
+            "radar_sensitivity": sensitivity,
             "ranges": [0] * 15,
             "detection_thresholds": [100] * 15,
             "keep_thresholds": [80] * 15,
@@ -337,8 +340,11 @@ async def test_lwr02_mode_save_only_writes_active_sensor_settings(work_mode: int
         client.async_set_radar_range.assert_not_awaited()
         client.async_set_thresholds.assert_not_awaited()
     else:
-        client.async_set_pir_sensitivity.assert_not_awaited()
-        client.async_set_radar_sensitivity.assert_awaited_once_with(3)
+        if work_mode == 1:
+            client.async_set_pir_sensitivity.assert_not_awaited()
+        else:
+            client.async_set_pir_sensitivity.assert_awaited_once_with(2)
+        client.async_set_radar_sensitivity.assert_awaited_once_with(sensitivity)
         client.async_set_radar_range.assert_awaited_once_with([0] * 15)
-        assert client.async_set_thresholds.await_count == 2
+        assert client.async_set_thresholds.await_count == (2 if sensitivity == 3 else 0)
     await session.async_close()
