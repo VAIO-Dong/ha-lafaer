@@ -235,6 +235,7 @@ async def websocket_subscribe_session(
         vol.Required("type"): "lafaer/session/heartbeat",
         vol.Required("device_id"): str,
         vol.Required("viewer_id"): str,
+        vol.Optional("background", default=False): bool,
     }
 )
 @websocket_api.async_response
@@ -243,7 +244,9 @@ async def websocket_session_heartbeat(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    ok = _controller(hass).sessions.heartbeat(msg["device_id"], msg["viewer_id"])
+    ok = _controller(hass).sessions.heartbeat(
+        msg["device_id"], msg["viewer_id"], background=msg.get("background", False)
+    )
     if not ok:
         connection.send_error(msg["id"], "expired_session", "device session has expired")
         return

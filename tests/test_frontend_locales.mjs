@@ -126,6 +126,8 @@ const context = {
   document: { hidden: false },
   setInterval: () => 1,
   clearInterval: () => {},
+  setTimeout: () => 1,
+  clearTimeout: () => {},
   HTMLElement: FakeHTMLElement,
   CustomEvent: class {constructor(type,options){this.type=type;Object.assign(this,options);}},
   customElements: {
@@ -191,8 +193,34 @@ sidebarPanel.narrow=false;
 assert.equal(sidebarButton.narrow,false);
 assert.match(sidebarPanel._renderList(),/id="sidebar-menu"/);
 sidebarPanel._selected={name:"Test"};
-assert.match(sidebarPanel._detailHeader(),/id="sidebar-menu"/);
-assert.match(sidebarPanel._debugView(),/id="sidebar-menu"/);
+assert.doesNotMatch(sidebarPanel._detailHeader(),/id="sidebar-menu"/);
+assert.doesNotMatch(sidebarPanel._debugView(),/id="sidebar-menu"/);
+assert.match(sidebarPanel._detailHeader(),/id="back"/);
+const visibilityPanel = new Panel();
+let closedSessions=0, backgroundRequest;
+visibilityPanel._view="detail";visibilityPanel._selected={device_id:"test"};
+visibilityPanel._viewerId="viewer";visibilityPanel._unsub=async()=>{closedSessions++;};
+visibilityPanel._hass={language:"en",callWS:async request=>{backgroundRequest=request;}};
+context.document.hidden=true;
+await visibilityPanel._onVisibility();
+assert.equal(closedSessions,0);
+assert.equal(backgroundRequest.background,true);
+assert.equal(visibilityPanel._backgroundTimer,1);
+context.document.hidden=false;
+await visibilityPanel._onVisibility();
+assert.equal(closedSessions,0);
+assert.equal(backgroundRequest.background,false);
+assert.equal(visibilityPanel._backgroundTimer,null);
+await visibilityPanel._closeSession();
+assert.equal(closedSessions,1);
+let renders=0;
+visibilityPanel.render=()=>{renders++;};
+visibilityPanel._settingsPage=true;
+visibilityPanel._snapshot={connected:true,status:{work_mode:2},config:{}};
+visibilityPanel._applySnapshot({connected:true,status:{work_mode:2,occupied:true},config:{}});
+assert.equal(renders,0,"status ticks must not rebuild settings");
+visibilityPanel._applySnapshot({connected:true,status:{work_mode:1},config:{}});
+assert.equal(renders,1);
 const actionPanel = new Panel();
 actionPanel._hass = {language: "en"};
 actionPanel._selected = {name: "Test", device_id: "test"};

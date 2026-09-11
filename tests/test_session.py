@@ -182,6 +182,30 @@ def manager(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.mark.asyncio
+async def test_background_grace_pauses_reads_and_expires(manager, monkeypatch) -> None:
+    monkeypatch.setattr(session_module, "STATUS_INTERVAL", 0.005)
+    viewer, _ = await manager.async_subscribe("dev1", lambda event: None)
+    active = manager.sessions["dev1"]
+    await active._ready.wait()
+    assert manager.heartbeat("dev1", viewer, background=True)
+    remaining = active.viewers[viewer][0] - asyncio.get_running_loop().time()
+    assert 59 < remaining <= 60
+    calls = active.client.status_calls
+    await asyncio.sleep(0.025)
+    assert active.client.status_calls == calls
+    assert not active.client.closed
+    assert manager.heartbeat("dev1", viewer)
+    await asyncio.sleep(0.025)
+    assert active.client.status_calls > calls
+    assert manager.heartbeat("dev1", viewer, background=True)
+    _, callback = active.viewers[viewer]
+    active.viewers[viewer] = (asyncio.get_running_loop().time() - 1, callback)
+    await asyncio.wait_for(active._task, timeout=0.2)
+    assert active.client.closed
+    assert manager.sessions == {}
+
+
+@pytest.mark.asyncio
 async def test_no_client_without_detail_viewer(manager) -> None:
     assert manager.sessions == {}
     assert FakeClient.instances == []

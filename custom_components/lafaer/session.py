@@ -56,6 +56,7 @@ class DeviceSession:
             debug=debug.protocol_callback,
         )
         self.viewers: dict[str, tuple[float, EventCallback]] = {}
+        self._background_viewers: set[str] = set()
         self.snapshot: dict[str, Any] = {"connected": False}
         self._task: asyncio.Task[None] | None = None
         self._ready = asyncio.Event()
@@ -85,18 +86,23 @@ class DeviceSession:
         )
         return viewer_id
 
-    def heartbeat(self, viewer_id: str) -> bool:
+    def heartbeat(self, viewer_id: str, *, background: bool = False) -> bool:
         viewer = self.viewers.get(viewer_id)
         if viewer is None:
             return False
+        if background:
+            self._background_viewers.add(viewer_id)
+        else:
+            self._background_viewers.discard(viewer_id)
         self.viewers[viewer_id] = (
-            asyncio.get_running_loop().time() + LEASE_TIMEOUT,
+            asyncio.get_running_loop().time() + (60 if background else LEASE_TIMEOUT),
             viewer[1],
         )
         return True
 
     def remove_viewer(self, viewer_id: str) -> None:
         self.viewers.pop(viewer_id, None)
+        self._background_viewers.discard(viewer_id)
 
     def _publish(self) -> None:
         event = {"device_id": self.device.device_id, **self.snapshot}
@@ -160,9 +166,12 @@ class DeviceSession:
                 now = asyncio.get_running_loop().time()
                 expired = [key for key, (deadline, _) in self.viewers.items() if deadline <= now]
                 for viewer_id in expired:
-                    self.viewers.pop(viewer_id, None)
+                    self.remove_viewer(viewer_id)
                 if not self.viewers:
                     break
+                if self._background_viewers.issuperset(self.viewers):
+                    await asyncio.sleep(STATUS_INTERVAL)
+                    continue
                 try:
                     status = await self.client.async_status()
                     self.snapshot.update(
@@ -365,6 +374,7 @@ class DeviceSession:
     async def async_close(self) -> None:
         self._closed = True
         self.viewers.clear()
+        self._background_viewers.clear()
         if self._task is not None and self._task is not asyncio.current_task():
             self._task.cancel()
             await asyncio.gather(self._task, return_exceptions=True)
@@ -408,9 +418,9 @@ class SessionManager:
         if self.sessions.get(session.device.device_id) is session:
             self.sessions.pop(session.device.device_id, None)
 
-    def heartbeat(self, device_id: str, viewer_id: str) -> bool:
+    def heartbeat(self, device_id: str, viewer_id: str, *, background: bool = False) -> bool:
         session = self.sessions.get(device_id)
-        return session is not None and session.heartbeat(viewer_id)
+        return session is not None and session.heartbeat(viewer_id, background=background)
 
     async def async_unsubscribe(self, device_id: str, viewer_id: str) -> None:
         session = self.sessions.get(device_id)
