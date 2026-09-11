@@ -33,6 +33,11 @@ for (const key of [
   "modeSensing",
   "currentEnergy",
   "keepEnergyLegend",
+  "thresholdsUpdating",
+  "radarFault",
+  "pirFault",
+  "climateFault",
+  "radarModeRequired",
   "thresholdValue",
   "connectingDevice",
   "connectionFailed",
@@ -562,5 +567,31 @@ listeners.get("wheel")();outer.scrollTop=780;flushFrame();
 assert.equal(outer.scrollTop,780,"deferred restoration must not undo user scrolling");
 assert.equal(frames.size,0);assert.equal(listeners.size,0);
 delete context.requestAnimationFrame;delete context.cancelAnimationFrame;
+
+{
+const guardedPanel=new Panel();guardedPanel._hass={language:"en"};
+const controls=new Map();
+guardedPanel.shadowRoot.querySelector=selector=>{if(!controls.has(selector))controls.set(selector,{});return controls.get(selector);};
+guardedPanel._snapshot={status:{work_mode:2},config:{radar_error:1},radar_status:{occupancy_status:1}};
+guardedPanel._syncSensingControls();
+assert.equal(controls.get("#radar-sensitivity").disabled,true);
+assert.equal(controls.get("#pir-sensitivity").disabled,false);
+assert.equal(controls.get("#save-mode").disabled,true);
+assert.equal(controls.get("#radar-state").textContent,guardedPanel.t.detected);
+guardedPanel._workModeDraft=0;guardedPanel._syncSensingControls();
+assert.equal(controls.get("#save-mode").disabled,false);
+guardedPanel._snapshot.config={};guardedPanel._snapshot.radar_status={studying:1};guardedPanel._syncSensingControls();
+assert.equal(controls.get("#save-mode").disabled,true);
+assert.equal(controls.get("#learning").disabled,true);
+guardedPanel._snapshot.radar_status={thresholds_updating:1};guardedPanel._syncSensingControls();
+assert.equal(controls.get("#sensing-message").textContent,guardedPanel.t.thresholdsUpdating);
+guardedPanel._snapshot.radar_status={thresholds_updating:0};guardedPanel._syncSensingControls();
+assert.equal(controls.get("#save-mode").disabled,false);
+assert.equal(guardedPanel._errorText({message:"pirFault"}),guardedPanel.t.pirFault);
+guardedPanel._selected={model:"LWR02"};
+guardedPanel._workModeDraft=2;
+const modeMarkup=guardedPanel._renderModeSensing();
+assert.ok(modeMarkup.indexOf('id="radar-state"')<modeMarkup.indexOf('class="radar-config"'));
+}
 
 console.log("frontend locale and lifecycle checks passed");

@@ -355,6 +355,8 @@ class LafaerProtocolClient:
     async def async_energy(self, *, keep: bool) -> list[int]:
         command = Command.RADAR_KEEP_VALUE if keep else Command.RADAR_DETECTION_VALUE
         response = await self._exchange(command, method="GET")
+        if len(response.data) != 30:
+            raise CoapError("radar energy response must contain exactly 30 bytes")
         from .codec import unpack_uint16_list
 
         return unpack_uint16_list(response.data)

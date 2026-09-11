@@ -18,6 +18,24 @@ from custom_components.lafaer.protocol.codec import DecodedResponse
 from custom_components.lafaer.protocol.commands import Command
 
 
+def test_lwr02_command_names_do_not_alias_lwr01() -> None:
+    assert Command.STATUS_LWR02 is not Command.STATUS_LWR01
+    assert Command.STATUS_LWR02.name == "STATUS_LWR02"
+    assert Command.WORK_MODE.name == "WORK_MODE"
+    assert Command.STATUS_LWR02.path == Command.STATUS_LWR01.path == "status"
+    assert Command.STATUS_LWR02.code == Command.STATUS_LWR01.code == 0
+    assert len(Command.__members__) == len(list(Command))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("size", [0, 28, 32])
+async def test_energy_rejects_incomplete_gate_data(size: int) -> None:
+    client = LafaerProtocolClient("fd00::1", "pairing", model="LWR02")
+    client._exchange = AsyncMock(return_value=DecodedResponse(0, bytes(size), 0, True))
+    with pytest.raises(CoapError, match="exactly 30"):
+        await client.async_energy(keep=False)
+
+
 @pytest.mark.asyncio
 async def test_rejected_command_emits_error_event(monkeypatch) -> None:
     events = []

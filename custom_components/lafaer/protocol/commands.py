@@ -12,6 +12,7 @@ class CommandSpec:
 
     path: str
     code: int
+    model: str = "LWR01"
 
 
 class Command(Enum):
@@ -35,27 +36,27 @@ class Command(Enum):
     INFORMATION = CommandSpec("status", 0x01)
 
     # LWR02 (some bytes intentionally overlap LWR01 commands)
-    STATUS_LWR02 = CommandSpec("status", 0x00)
-    RADAR_SENSITIVITY = CommandSpec("gl-radar", 0x01)
-    PIR_SENSITIVITY = CommandSpec("gl-radar", 0x02)
-    SELF_LEARNING = CommandSpec("gl-radar", 0x03)
-    PRESENCE_TIMEOUT = CommandSpec("gl-radar", 0x04)
-    DARK_LUX = CommandSpec("gl-radar", 0x05)
-    LED_LWR02 = CommandSpec("gl-radar", 0x06)
-    IDENTIFY_LWR02 = CommandSpec("gl-radar", 0x08)
-    WORK_MODE = CommandSpec("gl-radar", 0x0B)
-    START_OTA = CommandSpec("gl-radar", 0x0C)
-    RADAR_RESET_LWR02 = CommandSpec("gl-radar", 0x0D)
-    BATTERY_TYPE = CommandSpec("gl-radar", 0x0E)
-    RADAR_ACTIVE = CommandSpec("gl-radar", 0x0F)
-    RADAR_RANGE = CommandSpec("gl-radar", 0x10)
-    RADAR_DETECTION_THRESHOLD = CommandSpec("gl-radar", 0x11)
-    RADAR_KEEP_THRESHOLD = CommandSpec("gl-radar", 0x12)
-    RADAR_DETECTION_VALUE = CommandSpec("gl-radar", 0x13)
-    RADAR_KEEP_VALUE = CommandSpec("gl-radar", 0x14)
-    PIR_STATUS = CommandSpec("gl-radar", 0x15)
-    RADAR_STATUS = CommandSpec("gl-radar", 0x16)
-    CONFIG_LWR02 = CommandSpec("gl-radar", 0x00)
+    STATUS_LWR02 = CommandSpec("status", 0x00, "LWR02")
+    RADAR_SENSITIVITY = CommandSpec("gl-radar", 0x01, "LWR02")
+    PIR_SENSITIVITY = CommandSpec("gl-radar", 0x02, "LWR02")
+    SELF_LEARNING = CommandSpec("gl-radar", 0x03, "LWR02")
+    PRESENCE_TIMEOUT = CommandSpec("gl-radar", 0x04, "LWR02")
+    DARK_LUX = CommandSpec("gl-radar", 0x05, "LWR02")
+    LED_LWR02 = CommandSpec("gl-radar", 0x06, "LWR02")
+    IDENTIFY_LWR02 = CommandSpec("gl-radar", 0x08, "LWR02")
+    WORK_MODE = CommandSpec("gl-radar", 0x0B, "LWR02")
+    START_OTA = CommandSpec("gl-radar", 0x0C, "LWR02")
+    RADAR_RESET_LWR02 = CommandSpec("gl-radar", 0x0D, "LWR02")
+    BATTERY_TYPE = CommandSpec("gl-radar", 0x0E, "LWR02")
+    RADAR_ACTIVE = CommandSpec("gl-radar", 0x0F, "LWR02")
+    RADAR_RANGE = CommandSpec("gl-radar", 0x10, "LWR02")
+    RADAR_DETECTION_THRESHOLD = CommandSpec("gl-radar", 0x11, "LWR02")
+    RADAR_KEEP_THRESHOLD = CommandSpec("gl-radar", 0x12, "LWR02")
+    RADAR_DETECTION_VALUE = CommandSpec("gl-radar", 0x13, "LWR02")
+    RADAR_KEEP_VALUE = CommandSpec("gl-radar", 0x14, "LWR02")
+    PIR_STATUS = CommandSpec("gl-radar", 0x15, "LWR02")
+    RADAR_STATUS = CommandSpec("gl-radar", 0x16, "LWR02")
+    CONFIG_LWR02 = CommandSpec("gl-radar", 0x00, "LWR02")
 
     @property
     def path(self) -> str:

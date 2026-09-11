@@ -111,6 +111,7 @@ class Lwr2Config:
     darkness_enabled: bool
     darkness_threshold: int
     led_enabled: bool
+    climate_error: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -128,6 +129,7 @@ class Lwr2Config:
             darkness_enabled=data[6] == 1,
             darkness_threshold=unpack_uint16_be(data[7:9]),
             led_enabled=data[9] == 1,
+            climate_error=data[10] if len(data) >= 11 else None,
         )
 
 
@@ -165,6 +167,7 @@ class RadarStatus:
     presence_timeout: int
     ranges_valid: bool = True
     status_code: int = 0
+    thresholds_updating: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -181,6 +184,7 @@ class RadarStatus:
             radar_sensitivity=data[18],
             pir_sensitivity=data[19],
             presence_timeout=unpack_uint16_be(data[20:22]),
+            thresholds_updating=data[22] if len(data) >= 23 else None,
         )
 
 

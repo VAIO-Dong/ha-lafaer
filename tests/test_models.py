@@ -14,6 +14,14 @@ from custom_components.lafaer.protocol.models import (
 )
 
 
+def test_optional_lwr02_fault_and_update_flags() -> None:
+    assert Lwr2Config.parse(bytes(10)).climate_error is None
+    assert Lwr2Config.parse(bytes(10) + b"\x01").climate_error == 1
+    assert RadarStatus.parse(bytes(22)).thresholds_updating is None
+    assert RadarStatus.parse(bytes(22) + b"\x01").thresholds_updating == 1
+    assert RadarStatus.parse(bytes(23)).thresholds_updating == 0
+
+
 def test_parse_lwr01_status_uses_little_endian() -> None:
     status = DeviceStatus.parse_lwr01(bytes((1, 0, 75, 0, 0x34, 0x12, 0x2C, 0x01)))
     assert status.occupied is True
