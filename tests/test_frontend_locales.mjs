@@ -124,6 +124,7 @@ class FakeHTMLElement {
 
 const registry = new Map();
 const context = {
+  window: {addEventListener(){},removeEventListener(){}},
   document: { hidden: false },
   setInterval: () => 1,
   clearInterval: () => {},
@@ -525,5 +526,41 @@ for(const language of ["en","zh-Hans","zh-Hant"]){
   assert.ok(keepChart.config.legend.startsWith(detectionChart.config.legend));
   assert.ok(keepChart.config.legend.length>detectionChart.config.legend.length);
 }
+
+const homePanel=new Panel();
+homePanel._hass={language:"en"};homePanel._view="detail";homePanel._selected={model:"LWR02"};
+homePanel._snapshot={connected:true,status:{work_mode:2},config:{}};
+let homeRenders=0;homePanel.render=()=>{homeRenders++;};
+const statusNodes=Array.from({length:5},()=>{const label={},value={},classes={};return {label,value,classes,querySelector:selector=>selector==="small"?label:value,classList:{toggle:(key,on)=>{classes[key]=on;}}};});
+homePanel.shadowRoot.querySelectorAll=()=>statusNodes;
+homePanel._applySnapshot({connected:true,status:{work_mode:2,occupied:true,illuminance:123,temperature_c:24,humidity:55,battery_level:88},config:{}});
+assert.equal(homeRenders,0,"home status ticks must update existing nodes");
+assert.equal(statusNodes[1].value.textContent,"123 lx");
+assert.equal(statusNodes[0].classes.active,true);
+homePanel._applySnapshot({connected:false,error:"timeout"});
+assert.equal(homeRenders,1,"connection transitions must still update the page");
+
+const scrollPanel=new Panel(),outer={scrollTop:640,scrollLeft:12};
+scrollPanel.parentElement=outer;scrollPanel.style={minHeight:""};scrollPanel.getBoundingClientRect=()=>({height:1400});
+const frames=new Map(),listeners=new Map();let nextFrame=0;
+context.requestAnimationFrame=callback=>{frames.set(++nextFrame,callback);return nextFrame;};
+context.cancelAnimationFrame=id=>frames.delete(id);
+context.window.addEventListener=(event,callback)=>listeners.set(event,callback);
+context.window.removeEventListener=event=>listeners.delete(event);
+const flushFrame=()=>{const pending=[...frames.values()];frames.clear();pending.forEach(callback=>callback());};
+const oldPre={scrollTop:210,scrollLeft:17,parentNode:scrollPanel.shadowRoot};
+scrollPanel.shadowRoot.children=[oldPre];scrollPanel.shadowRoot.querySelectorAll=()=>[oldPre];
+const restore=scrollPanel._preserveRenderScroll();
+assert.equal(scrollPanel.style.minHeight,"1400px");
+const newPre={scrollTop:0,scrollLeft:0,parentNode:scrollPanel.shadowRoot};scrollPanel.shadowRoot.children=[newPre];
+outer.scrollTop=0;restore();
+assert.equal(outer.scrollTop,640);assert.equal(newPre.scrollTop,210);assert.equal(newPre.scrollLeft,17);
+outer.scrollTop=0;flushFrame();assert.equal(outer.scrollTop,640);
+outer.scrollTop=0;flushFrame();assert.equal(outer.scrollTop,640);assert.equal(scrollPanel.style.minHeight,"");
+const restoreAgain=scrollPanel._preserveRenderScroll();restoreAgain();
+listeners.get("wheel")();outer.scrollTop=780;flushFrame();
+assert.equal(outer.scrollTop,780,"deferred restoration must not undo user scrolling");
+assert.equal(frames.size,0);assert.equal(listeners.size,0);
+delete context.requestAnimationFrame;delete context.cancelAnimationFrame;
 
 console.log("frontend locale and lifecycle checks passed");
