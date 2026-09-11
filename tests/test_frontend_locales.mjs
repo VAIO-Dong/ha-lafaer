@@ -199,6 +199,8 @@ assert.match(renamePanel._deviceCard(managedDevice,{adopted:true}),/data-rename=
 assert.doesNotMatch(renamePanel._deviceCard(managedDevice,{adopted:false}),/data-rename/);
 assert.match(renamePanel.shadowRoot.innerHTML,/<\/main><div class="notification-layer/);
 assert.match(source,/\.notification-layer\{position:fixed;/);
+assert.match(source,/var\(--header-height,56px\) \+ 8px/);
+assert.match(source,/\.notification-layer>#dismiss-notice\{position:absolute;inset-inline-end:8px/);
 renamePanel._error="Test error";
 assert.match(renamePanel._alerts(),/role="alert"/);
 const sidebarPanel = new Panel();
@@ -293,6 +295,9 @@ learningPanel._dialog = async () => {learningPanel._sessionGeneration++;return t
 await learningPanel._confirmLearning();
 assert.equal(learningActions, 1, "expired sessions cannot start learning");
 assert.match(source, /const HA_LAYOUT_STYLES/);
+assert.match(source, /\.device \.device-name-row h3\{margin:0;font-size:16px;line-height:22px\}/);
+assert.match(source, /ha-icon\{display:inline-flex;align-items:center;justify-content:center/);
+assert.match(source, /class="menu-label"/);
 assert.match(source, /select,\.detail-section #timeout\{box-sizing:border-box;height:38px;min-height:38px/);
 assert.match(source, /\.radar-config>\.energy-advanced\{margin-top:4px\}/);
 assert.match(source, /height:var\(--header-height,56px\);min-height:var\(--header-height,56px\);margin:0;padding:0 20px/);
