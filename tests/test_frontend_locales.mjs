@@ -70,6 +70,17 @@ assert.match(source, /this\._adoptionStates\.set\(key,\{status:"error"/);
 assert.match(source, /id="menu-manual"/);
 assert.match(source, /id="menu-debug"/);
 assert.match(source, /id="detail-more"/);
+const controls = source.slice(source.indexOf("  _renderAdvanced(){"), source.indexOf("\n", source.indexOf("  _renderAdvanced(){")));
+assert.ok(controls.indexOf('id="led"') < controls.indexOf('id="battery-type"'));
+assert.ok(controls.indexOf('id="battery-type"') < controls.indexOf('id="darkness"'));
+const header = source.slice(source.indexOf("  _detailHeader("), source.indexOf("\n", source.indexOf("  _detailHeader(")));
+assert.match(header, /data-forget role="menuitem"/);
+assert.ok(header.indexOf("data-forget") < header.indexOf('data-danger="factory_reset"'));
+const info = source.slice(source.indexOf("  _renderInfo(){"), source.indexOf("\n", source.indexOf("  _renderInfo(){")));
+assert.doesNotMatch(info, /data-forget/);
+for (const label of ["Remove from Lafaer management", "从 Lafaer 管理中移除", "從 Lafaer 管理中移除"]) {
+  assert.ok(dictionarySource.includes(label));
+}
 assert.match(source, /const DETAIL_STYLES/);
 assert.match(source, /if\(this\._snapshot\?\.connected!==true\)return this\._renderConnection\(\)/);
 assert.match(source, /<details id="energy-advanced"/);
