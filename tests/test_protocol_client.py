@@ -18,6 +18,16 @@ from custom_components.lafaer.protocol.commands import Command
 
 
 @pytest.mark.asyncio
+async def test_radar_activation_payload() -> None:
+    client = LafaerProtocolClient("fd00::1", "pairing", model="LWR02")
+    client._exchange = AsyncMock()
+    await client.async_activate_radar()
+    client._exchange.assert_awaited_once_with(
+        Command.RADAR_ACTIVE, method="POST", data=b"\x01"
+    )
+
+
+@pytest.mark.asyncio
 async def test_radar_status_matches_app_range_get_behavior() -> None:
     client = LafaerProtocolClient("fd00::1", "pairing", model="LWR02")
     payload = bytes(15) + bytes((0, 0, 0, 1, 2, 0, 30))

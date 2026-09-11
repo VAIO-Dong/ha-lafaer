@@ -357,6 +357,10 @@ class LafaerProtocolClient:
 
         return unpack_uint16_list(response.data)
 
+    async def async_activate_radar(self) -> None:
+        """Keep the LWR02 hybrid-mode radar awake for 30 seconds."""
+        await self._exchange(Command.RADAR_ACTIVE, method="POST", data=b"\x01")
+
     async def async_set_led(self, enabled: bool) -> None:
         command = Command.LED_LWR02 if self.model == "LWR02" else Command.LED
         await self._exchange(command, method="POST", data=bytes((int(enabled),)))

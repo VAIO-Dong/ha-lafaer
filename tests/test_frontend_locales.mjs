@@ -57,7 +57,6 @@ assert.match(source, /save_advanced/);
 assert.doesNotMatch(source, /\b(?:prompt|confirm)\(/);
 assert.match(source, /step:this\._selected\.model==="LWR01"\?1\.4:\.75/);
 assert.match(source, /if \(!customElements\.get\("ha-lafaer-panel"\)\)/);
-assert.match(source, /s\.distance_cm/);
 assert.match(source, /s\.work_mode/);
 assert.doesNotMatch(source, /type:"lafaer\/device\/adopt",\.\.\.device/);
 assert.match(source, /device_id:device\.device_id\.trim\(\)/);
@@ -71,7 +70,7 @@ assert.match(source, /id="menu-manual"/);
 assert.match(source, /id="menu-debug"/);
 assert.match(source, /id="detail-more"/);
 const controls = source.slice(source.indexOf("  _renderAdvanced(){"), source.indexOf("\n", source.indexOf("  _renderAdvanced(){")));
-assert.ok(controls.indexOf('id="led"') < controls.indexOf('id="battery-type"'));
+assert.doesNotMatch(controls, /id="led"/);
 assert.ok(controls.indexOf('id="battery-type"') < controls.indexOf('id="darkness"'));
 const header = source.slice(source.indexOf("  _detailHeader("), source.indexOf("\n", source.indexOf("  _detailHeader(")));
 assert.match(header, /data-forget role="menuitem"/);
@@ -124,6 +123,9 @@ class FakeHTMLElement {
 
 const registry = new Map();
 const context = {
+  document: { hidden: false },
+  setInterval: () => 1,
+  clearInterval: () => {},
   HTMLElement: FakeHTMLElement,
   CustomEvent: class {},
   customElements: {
@@ -180,9 +182,50 @@ const overview = panel
   ._renderDetail()
   .match(/<section class="detail-section overview">.*?<\/section>/s)[0];
 assert.doesNotMatch(overview, /Detection mode|PIR status|Radar status/);
+assert.match(panel._renderDetail(), /id="led"/);
+assert.match(panel._renderDetail(), /id="open-settings"/);
+assert.doesNotMatch(panel._renderDetail(), /id="save-mode"|id="battery-type"/);
+panel._settingsPage = true;
+assert.match(panel._renderDetail(), /id="save-mode"/);
+assert.doesNotMatch(panel._renderDetail(), /id="led"/);
+panel._settingsPage = false;
+panel._selected.model = "LWR01";
+panel._snapshot.status = {power_type: 2, battery_level: 100};
+assert.match(panel._renderDetail(), /External power/);
+assert.doesNotMatch(panel._renderDetail(), /Detection distance|<small>Battery<\/small>|Temperature|Humidity/);
+panel._snapshot.status.power_type = 1;
+assert.match(panel._renderDetail(), /100%/);
 
 panel._snapshot = null;
 assert.match(panel._renderDetail(), /Connecting to device/);
+
+const pollingPanel = new Panel();
+let radarReads = 0;
+pollingPanel._hass = { language: "en", callWS: async () => {radarReads++;return {values: [1]};} };
+pollingPanel._selected = {device_id: "test", model: "LWR02"};
+pollingPanel._viewerId = "viewer";
+pollingPanel._snapshot = {connected: true, status: {work_mode: 2}};
+pollingPanel._energyOpen = true;
+await pollingPanel._readEnergy("detection_energy");
+assert.equal(radarReads, 0, "device home must not request radar energy");
+pollingPanel._settingsPage = true;
+await pollingPanel._readEnergy("detection_energy");
+assert.equal(radarReads, 1);
+context.document.hidden = true;
+await pollingPanel._readEnergy("detection_energy");
+assert.equal(radarReads, 1, "hidden pages must not request radar energy");
+context.document.hidden = false;
+pollingPanel._snapshot.status.work_mode = 0;
+await pollingPanel._readEnergy("detection_energy");
+assert.equal(radarReads, 1, "PIR mode must not request radar energy");
+pollingPanel._snapshot.status.work_mode = 2;
+pollingPanel._setEnergyPolling(false);
+await pollingPanel._readEnergy("detection_energy");
+assert.equal(radarReads, 1, "collapsed charts must stop reading");
+pollingPanel._rangeTimer = 1;
+await pollingPanel._closeSession();
+assert.equal(pollingPanel._rangeTimer, null);
+assert.equal(pollingPanel._viewerId, null);
 
 // Background status renders must not replace a dialog while the user is typing.
 let acceptClick, cancelClick, closed;

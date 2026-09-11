@@ -60,6 +60,8 @@ class DeviceSession:
         self._task: asyncio.Task[None] | None = None
         self._ready = asyncio.Event()
         self._closed = False
+        self._radar_read_lock = asyncio.Lock()
+        self._radar_active_at: float | None = None
 
     async def async_start(self) -> None:
         self.start()
@@ -230,6 +232,8 @@ class DeviceSession:
         if action not in methods:
             raise ValueError(f"unsupported action: {action}")
         await methods[action]()
+        if action in {"set_work_mode", "save_mode_sensing", "radar_reset"}:
+            self._radar_active_at = None
         if action not in {"factory_reset", "delete_management"}:
             status = await self.client.async_status()
             self.snapshot["status"] = status.as_dict()
@@ -326,6 +330,30 @@ class DeviceSession:
         """Perform a foreground-only read requested by the visible panel."""
         if self.device.model != "LWR02":
             raise ValueError("real-time radar values are only available on LWR02")
+        if kind not in {"detection_energy", "keep_energy", "radar_status"}:
+            raise ValueError(f"unsupported read: {kind}")
+        async with self._radar_read_lock:
+            if self._closed or not self.snapshot.get("connected"):
+                raise RuntimeError("device is not connected")
+            mode = self.snapshot.get("status", {}).get("work_mode")
+            if mode not in (1, 2):
+                raise ValueError("radar data is unavailable in the current mode")
+            now = asyncio.get_running_loop().time()
+            if mode == 2 and (
+                self._radar_active_at is None or now - self._radar_active_at >= 25
+            ):
+                await self.client.async_activate_radar()
+                self._radar_active_at = now
+            elif mode == 1:
+                self._radar_active_at = None
+            return await self._async_read_radar(kind)
+
+    async def _async_read_radar(self, kind: str) -> dict[str, Any]:
+        """Read after activating, serialized across viewers and chart requests."""
+        if kind == "radar_status":
+            status = (await self.client.async_radar_status()).as_dict()
+            self.snapshot["radar_status"] = status
+            return {"kind": kind, "values": status}
         if kind == "detection_energy":
             values = await self.client.async_energy(keep=False)
         elif kind == "keep_energy":

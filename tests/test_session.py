@@ -22,6 +22,35 @@ class FakeHass:
 
 
 @pytest.mark.asyncio
+async def test_radar_activation_is_foreground_mode_gated_and_shared() -> None:
+    device = StoredDevice(
+        device_id="radar", model="LWR02", host="fd00::1", pairing_material="pairing"
+    )
+    session = session_module.DeviceSession(FakeHass(), device, FakeStore(device), FakeDebug())
+    session.client = AsyncMock()
+    session.client.async_energy.return_value = [12]
+    session.snapshot = {"connected": True, "status": {"work_mode": 2}}
+    await asyncio.gather(
+        session.async_read("detection_energy"), session.async_read("keep_energy")
+    )
+    session.client.async_activate_radar.assert_awaited_once()
+    session._radar_active_at -= 25
+    await session.async_read("detection_energy")
+    assert session.client.async_activate_radar.await_count == 2
+    session.snapshot["status"]["work_mode"] = 1
+    await session.async_read("detection_energy")
+    assert session.client.async_activate_radar.await_count == 2
+    session.snapshot["status"]["work_mode"] = 0
+    with pytest.raises(ValueError, match="unavailable"):
+        await session.async_read("detection_energy")
+    assert session.client.async_energy.await_count == 4
+    await session.async_close()
+    with pytest.raises(RuntimeError, match="not connected"):
+        await session.async_read("detection_energy")
+    assert session.client.async_activate_radar.await_count == 2
+
+
+@pytest.mark.asyncio
 async def test_failed_initial_read_cancels_siblings_before_returning() -> None:
     started = asyncio.Event()
     cancelled = asyncio.Event()
