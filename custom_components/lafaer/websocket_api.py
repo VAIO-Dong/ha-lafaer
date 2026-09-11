@@ -287,7 +287,9 @@ async def websocket_device_action(
     {
         vol.Required("type"): "lafaer/device/read",
         vol.Required("device_id"): str,
-        vol.Required("kind"): vol.In(("detection_energy", "keep_energy", "radar_status")),
+        vol.Required("kind"): vol.In(
+            ("detection_energy", "keep_energy", "radar_status", "sensing_status")
+        ),
     }
 )
 @websocket_api.async_response

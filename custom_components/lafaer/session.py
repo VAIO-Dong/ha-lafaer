@@ -330,13 +330,13 @@ class DeviceSession:
         """Perform a foreground-only read requested by the visible panel."""
         if self.device.model != "LWR02":
             raise ValueError("real-time radar values are only available on LWR02")
-        if kind not in {"detection_energy", "keep_energy", "radar_status"}:
+        if kind not in {"detection_energy", "keep_energy", "radar_status", "sensing_status"}:
             raise ValueError(f"unsupported read: {kind}")
         async with self._radar_read_lock:
             if self._closed or not self.snapshot.get("connected"):
                 raise RuntimeError("device is not connected")
             mode = self.snapshot.get("status", {}).get("work_mode")
-            if mode not in (1, 2):
+            if mode not in (1, 2) and not (mode == 0 and kind == "sensing_status"):
                 raise ValueError("radar data is unavailable in the current mode")
             now = asyncio.get_running_loop().time()
             if mode == 2 and (
@@ -350,7 +350,7 @@ class DeviceSession:
 
     async def _async_read_radar(self, kind: str) -> dict[str, Any]:
         """Read after activating, serialized across viewers and chart requests."""
-        if kind == "radar_status":
+        if kind in {"radar_status", "sensing_status"}:
             status = (await self.client.async_radar_status()).as_dict()
             self.snapshot["radar_status"] = status
             return {"kind": kind, "values": status}

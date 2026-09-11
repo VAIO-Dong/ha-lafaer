@@ -41,6 +41,10 @@ async def test_radar_activation_is_foreground_mode_gated_and_shared() -> None:
     await session.async_read("detection_energy")
     assert session.client.async_activate_radar.await_count == 2
     session.snapshot["status"]["work_mode"] = 0
+    session.client.async_radar_status.return_value.as_dict = lambda: {"pir_status": 1}
+    result = await session.async_read("sensing_status")
+    assert result["values"]["pir_status"] == 1
+    assert session.client.async_activate_radar.await_count == 2
     with pytest.raises(ValueError, match="unavailable"):
         await session.async_read("detection_energy")
     assert session.client.async_energy.await_count == 4
@@ -48,6 +52,22 @@ async def test_radar_activation_is_foreground_mode_gated_and_shared() -> None:
     with pytest.raises(RuntimeError, match="not connected"):
         await session.async_read("detection_energy")
     assert session.client.async_activate_radar.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_settings_status_activates_hybrid_radar_before_read() -> None:
+    device = StoredDevice(
+        device_id="radar", model="LWR02", host="fd00::1", pairing_material="pairing"
+    )
+    session = session_module.DeviceSession(FakeHass(), device, FakeStore(device), FakeDebug())
+    session.client = AsyncMock()
+    session.snapshot = {"connected": True, "status": {"work_mode": 2}}
+    session.client.async_radar_status.return_value.as_dict = lambda: {"pir_status": 0}
+    await session.async_read("sensing_status")
+    assert [call[0] for call in session.client.mock_calls][:2] == [
+        "async_activate_radar", "async_radar_status"
+    ]
+    await session.async_close()
 
 
 @pytest.mark.asyncio
