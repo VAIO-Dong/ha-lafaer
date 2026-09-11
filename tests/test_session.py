@@ -12,6 +12,9 @@ from custom_components.lafaer import session as session_module
 from custom_components.lafaer.protocol.models import (
     DeviceInfo,
     DeviceStatus,
+    Lwr2Config,
+    RadarStatus,
+    RadarThresholds,
     StoredDevice,
 )
 
@@ -22,28 +25,52 @@ class FakeHass:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("flag", ["studying", "thresholds_updating"])
-async def test_threshold_refresh_waits_for_completion_and_retries(flag: str) -> None:
+@pytest.mark.parametrize("trailing", [0, 1, 255])
+async def test_detail_entry_always_reads_thresholds(trailing: int) -> None:
+    device = StoredDevice(device_id="test", model="LWR02", host="fd00::1", pairing_material="key")
+    session = session_module.DeviceSession(FakeHass(), device, FakeStore(device), FakeDebug())
+    session.client = AsyncMock()
+    session.client.async_authenticate.return_value = "key"
+    session.client.async_status.return_value = DeviceStatus.parse_lwr02(bytes(11))
+    session.client.async_information.return_value = DeviceInfo()
+    session.client.async_lwr02_config.return_value = Lwr2Config.parse(bytes(11))
+    session.client.async_radar_status.return_value = RadarStatus.parse(
+        bytes(22) + bytes([trailing])
+    )
+    session.client.async_thresholds.return_value = RadarThresholds.parse(bytes(75))
+    await session._async_initial_load()
+    assert session.client.async_thresholds.await_count == 2
+    assert len(session.snapshot["detection_thresholds"]["custom"]) == 15
+    assert len(session.snapshot["keep_thresholds"]["custom"]) == 15
+    # A pending retry is not a sensor busy state and must not block learning.
+    session._threshold_refresh_pending = True
+    session.snapshot["status"]["work_mode"] = 2
+    session._validate_sensing_action("start_learning", {})
+    await session.async_close()
+
+
+@pytest.mark.asyncio
+async def test_threshold_refresh_waits_for_learning_completion_and_retries() -> None:
     device = StoredDevice(device_id="test", model="LWR02", host="fd00::1")
     session = session_module.DeviceSession(FakeHass(), device, FakeStore(device), FakeDebug())
     session.client = AsyncMock()
     session.snapshot = {"connected": True, "status": {"work_mode": 1}}
-    state = {"studying": 0, "thresholds_updating": 0, flag: 1}
+    state = {"studying": 1}
     session.client.async_radar_status.return_value.as_dict = lambda: dict(state)
     session.client.async_lwr02_config.return_value.as_dict = lambda: {"radar_sensitivity": 3}
     session.client.async_thresholds.return_value.as_dict = lambda: {"custom": [123] * 15}
     await session.async_read("sensing_status")
     session.client.async_thresholds.assert_not_awaited()
-    assert session.snapshot["threshold_refresh_pending"]
-    state[flag] = 0
+    assert session._threshold_refresh_pending
+    state["studying"] = 0
     session.client.async_thresholds.side_effect = RuntimeError("temporary failure")
     with pytest.raises(RuntimeError, match="temporary failure"):
         await session.async_read("sensing_status")
-    assert session.snapshot["threshold_refresh_pending"]
+    assert session._threshold_refresh_pending
     assert "detection_thresholds" not in session.snapshot
     session.client.async_thresholds.side_effect = None
     await session.async_read("sensing_status")
-    assert not session.snapshot["threshold_refresh_pending"]
+    assert not session._threshold_refresh_pending
     assert session.snapshot["detection_thresholds"]["custom"] == [123] * 15
     calls = session.client.async_thresholds.await_count
     await session.async_read("sensing_status")
@@ -56,7 +83,6 @@ async def test_threshold_refresh_waits_for_completion_and_retries(flag: str) -> 
     ({"radar_error": 1}, {}, "set_radar_sensitivity", {"value": 2}, "radarFault"),
     ({"pir_error": 1}, {}, "set_pir_sensitivity", {"value": 2}, "pirFault"),
     ({}, {"studying": 1}, "save_mode_sensing", {}, "learningRunning"),
-    ({}, {"thresholds_updating": 1}, "save_mode_sensing", {}, "thresholdsUpdating"),
 ])
 async def test_faults_block_writes_before_any_command(config, radar, action, data, error) -> None:
     device = StoredDevice(device_id="test", model="LWR02", host="fd00::1")

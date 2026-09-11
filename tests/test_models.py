@@ -14,12 +14,12 @@ from custom_components.lafaer.protocol.models import (
 )
 
 
-def test_optional_lwr02_fault_and_update_flags() -> None:
+def test_optional_lwr02_fault_and_ignored_trailing_byte() -> None:
     assert Lwr2Config.parse(bytes(10)).climate_error is None
     assert Lwr2Config.parse(bytes(10) + b"\x01").climate_error == 1
-    assert RadarStatus.parse(bytes(22)).thresholds_updating is None
-    assert RadarStatus.parse(bytes(22) + b"\x01").thresholds_updating == 1
-    assert RadarStatus.parse(bytes(23)).thresholds_updating == 0
+    expected = RadarStatus.parse(bytes(22)).as_dict()
+    for trailing in (0, 1, 255):
+        assert RadarStatus.parse(bytes(22) + bytes([trailing])).as_dict() == expected
 
 
 def test_parse_lwr01_status_uses_little_endian() -> None:

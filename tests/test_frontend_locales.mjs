@@ -33,7 +33,6 @@ for (const key of [
   "modeSensing",
   "currentEnergy",
   "keepEnergyLegend",
-  "thresholdsUpdating",
   "radarFault",
   "pirFault",
   "climateFault",
@@ -584,7 +583,10 @@ guardedPanel._snapshot.config={};guardedPanel._snapshot.radar_status={studying:1
 assert.equal(controls.get("#save-mode").disabled,true);
 assert.equal(controls.get("#learning").disabled,true);
 guardedPanel._snapshot.radar_status={thresholds_updating:1};guardedPanel._syncSensingControls();
-assert.equal(controls.get("#sensing-message").textContent,guardedPanel.t.thresholdsUpdating);
+assert.equal(controls.get("#sensing-message").textContent,"");
+assert.equal(controls.get("#learning").disabled,false);
+assert.equal(controls.get("#detection-chart").inert,false);
+assert.equal(controls.get("#save-mode").disabled,false);
 guardedPanel._snapshot.radar_status={thresholds_updating:0};guardedPanel._syncSensingControls();
 assert.equal(controls.get("#save-mode").disabled,false);
 assert.equal(guardedPanel._errorText({message:"pirFault"}),guardedPanel.t.pirFault);

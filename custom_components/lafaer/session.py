@@ -133,17 +133,21 @@ class DeviceSession:
                 config=config.as_dict(),
                 radar_status=radar_status.as_dict(),
             )
-            self._threshold_refresh_pending = (
-                radar_status.studying == 1 or radar_status.thresholds_updating == 1
-            )
-            self.snapshot["threshold_refresh_pending"] = self._threshold_refresh_pending
-            if not self._threshold_refresh_pending and config.radar_error != 1:
+            # The trailing range-response flag is not implemented by firmware.
+            # Fetch thresholds on entry, independently of that reserved byte.
+            try:
                 detection, keep = await _gather_reads(
                     self.client.async_thresholds(keep=False),
                     self.client.async_thresholds(keep=True),
                 )
                 self.snapshot.update(
                     detection_thresholds=detection.as_dict(), keep_thresholds=keep.as_dict(),
+                )
+            except Exception as err:
+                self._threshold_refresh_pending = True
+                self.debug.add(
+                    "protocol", "initial threshold read failed; will retry in foreground",
+                    level="warning", data={"error": str(err)},
                 )
         else:
             ranges, settings = await _gather_reads(
@@ -232,8 +236,6 @@ class DeviceSession:
         radar = self.snapshot.get("radar_status", {})
         if radar.get("studying") == 1:
             raise ValueError("learningRunning")
-        if radar.get("thresholds_updating") == 1 or self._threshold_refresh_pending:
-            raise ValueError("thresholdsUpdating")
         mode = int(data.get("work_mode", data.get(
             "mode", self.snapshot.get("status", {}).get("work_mode", 2)
         )))
@@ -302,7 +304,6 @@ class DeviceSession:
         if action == "start_learning" and self.device.model == "LWR02":
             self.snapshot.setdefault("radar_status", {})["studying"] = 1
             self._threshold_refresh_pending = True
-            self.snapshot["threshold_refresh_pending"] = True
             self._publish()
         if action in {"set_work_mode", "save_mode_sensing", "radar_reset"}:
             self._radar_active_at = None
@@ -315,14 +316,11 @@ class DeviceSession:
                     self.snapshot["radar_status"] = (
                         await self.client.async_radar_status()
                     ).as_dict()
-                if self.snapshot.get("radar_status", {}).get("thresholds_updating") == 1:
-                    self._threshold_refresh_pending = True
-                    self.snapshot["threshold_refresh_pending"] = True
                 if action in {
                     "set_detection_thresholds",
                     "radar_reset",
                     "save_mode_sensing",
-                } and not self._threshold_refresh_pending:
+                }:
                     self.snapshot["detection_thresholds"] = (
                         await self.client.async_thresholds(keep=False)
                     ).as_dict()
@@ -330,7 +328,7 @@ class DeviceSession:
                     "set_keep_thresholds",
                     "radar_reset",
                     "save_mode_sensing",
-                } and not self._threshold_refresh_pending:
+                }:
                     self.snapshot["keep_thresholds"] = (
                         await self.client.async_thresholds(keep=True)
                     ).as_dict()
@@ -424,8 +422,6 @@ class DeviceSession:
                 radar = self.snapshot.get("radar_status", {})
                 if radar.get("studying") == 1:
                     raise ValueError("learningRunning")
-                if radar.get("thresholds_updating") == 1 or self._threshold_refresh_pending:
-                    raise ValueError("thresholdsUpdating")
             now = asyncio.get_running_loop().time()
             if mode == 2 and (
                 self._radar_active_at is None or now - self._radar_active_at >= 20
@@ -441,18 +437,11 @@ class DeviceSession:
         if kind in {"radar_status", "sensing_status"}:
             status = (await self.client.async_radar_status()).as_dict()
             previous = self.snapshot.get("radar_status", {})
-            if (
-                status.get("studying") == 1 or status.get("thresholds_updating") == 1
-                or previous.get("studying") == 1 or previous.get("thresholds_updating") == 1
-            ):
+            if status.get("studying") == 1 or previous.get("studying") == 1:
                 self._threshold_refresh_pending = True
             self.snapshot["radar_status"] = status
-            self.snapshot["threshold_refresh_pending"] = self._threshold_refresh_pending
             self._publish()
-            if (
-                self._threshold_refresh_pending and status.get("studying") != 1
-                and status.get("thresholds_updating") != 1
-            ):
+            if self._threshold_refresh_pending and status.get("studying") != 1:
                 # Commit the complete refresh together. A failed read leaves
                 # the pending flag set so the next foreground poll retries.
                 config = await self.client.async_lwr02_config()
@@ -463,7 +452,6 @@ class DeviceSession:
                     keep_thresholds=keep.as_dict(),
                 )
                 self._threshold_refresh_pending = False
-                self.snapshot["threshold_refresh_pending"] = False
             self._publish()
             return {"kind": kind, "values": status}
         if self._last_energy_read_at is not None:

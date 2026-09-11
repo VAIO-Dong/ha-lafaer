@@ -167,7 +167,6 @@ class RadarStatus:
     presence_timeout: int
     ranges_valid: bool = True
     status_code: int = 0
-    thresholds_updating: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -184,7 +183,6 @@ class RadarStatus:
             radar_sensitivity=data[18],
             pir_sensitivity=data[19],
             presence_timeout=unpack_uint16_be(data[20:22]),
-            thresholds_updating=data[22] if len(data) >= 23 else None,
         )
 
 
