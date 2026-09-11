@@ -33,6 +33,7 @@ for (const key of [
   "modeSensing",
   "currentEnergy",
   "keepEnergyLegend",
+  "rangeHint",
   "radarFault",
   "pirFault",
   "climateFault",
@@ -594,6 +595,7 @@ guardedPanel._selected={model:"LWR02"};
 guardedPanel._workModeDraft=2;
 const modeMarkup=guardedPanel._renderModeSensing();
 assert.ok(modeMarkup.indexOf('id="radar-state"')<modeMarkup.indexOf('class="radar-config"'));
+assert.ok(modeMarkup.includes(`<p class="chart-legend">${guardedPanel.t.rangeHint}</p><lafaer-range-editor id="range">`));
 }
 
 console.log("frontend locale and lifecycle checks passed");
