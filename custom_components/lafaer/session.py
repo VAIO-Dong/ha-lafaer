@@ -285,10 +285,10 @@ class DeviceSession:
                 self._validated_radar_ranges(data["ranges"])
             ),
             "set_detection_thresholds": lambda: self.client.async_set_thresholds(
-                [int(value) for value in data["values"]], keep=False
+                data["values"], keep=False
             ),
             "set_keep_thresholds": lambda: self.client.async_set_thresholds(
-                [int(value) for value in data["values"]], keep=True
+                data["values"], keep=True
             ),
             "set_lwr01_ranges": lambda: self.client.async_set_lwr01_ranges(
                 [int(value) for value in data["enabled"]],
@@ -363,6 +363,13 @@ class DeviceSession:
 
     async def _async_save_mode_sensing(self, data: dict[str, Any]) -> None:
         """Save the mode and sensing section as one user action."""
+        if (
+            self.device.model == "LWR02"
+            and int(data["work_mode"]) != 0
+            and int(data["radar_sensitivity"]) == 3
+        ):
+            for key in ("detection_thresholds", "keep_thresholds"):
+                LafaerProtocolClient.validate_thresholds(data[key])
         await self.client.async_set_presence_timeout(int(data["presence_timeout"]))
         if self.device.model == "LWR01":
             await self.client.async_set_lwr01_ranges(
@@ -386,10 +393,10 @@ class DeviceSession:
             # Preset modes use the device's own low/medium/high tables.
             if int(data["radar_sensitivity"]) == 3:
                 await self.client.async_set_thresholds(
-                    [int(value) for value in data["detection_thresholds"]], keep=False
+                    data["detection_thresholds"], keep=False
                 )
                 await self.client.async_set_thresholds(
-                    [int(value) for value in data["keep_thresholds"]], keep=True
+                    data["keep_thresholds"], keep=True
                 )
 
     def _validated_radar_ranges(self, values: list[int]) -> list[int]:

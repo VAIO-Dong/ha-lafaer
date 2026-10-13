@@ -28,6 +28,56 @@ def test_lwr02_command_names_do_not_alias_lwr01() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("keep", [False, True])
+@pytest.mark.parametrize("invalid", [0, -1, 65536, 1.5, True, "1"])
+async def test_unsafe_thresholds_never_sent(keep, invalid) -> None:
+    client = LafaerProtocolClient("fd00::1", "pairing", model="LWR02")
+    client._exchange = AsyncMock()
+    values = [100] * 15
+    values[-1] = invalid
+    with pytest.raises(ValueError, match="integers between 1 and 65535"):
+        await client.async_set_thresholds(values, keep=keep)
+    client._exchange.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("keep", [False, True])
+@pytest.mark.parametrize("value", [1, 65535])
+async def test_threshold_boundaries(keep, value) -> None:
+    client = LafaerProtocolClient("fd00::1", "pairing", model="LWR02")
+    client._exchange = AsyncMock()
+    await client.async_set_thresholds([value] * 15, keep=keep)
+    command = Command.RADAR_KEEP_THRESHOLD if keep else Command.RADAR_DETECTION_THRESHOLD
+    client._exchange.assert_awaited_once_with(
+        command, method="POST", data=value.to_bytes(2, "big") * 15
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model,minimum", [("LWR02", 10), ("LWR01", 20)])
+@pytest.mark.parametrize("seconds", [0, -1, 9, 3601])
+async def test_invalid_presence_timeout_never_sends_command(model, minimum, seconds) -> None:
+    client = LafaerProtocolClient("fd00::1", "pairing", model=model)
+    client._exchange = AsyncMock()
+    with pytest.raises(ValueError, match=f"between {minimum} and 3600"):
+        await client.async_set_presence_timeout(seconds)
+    client._exchange.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model,seconds,command,payload", [
+    ("LWR02", 10, Command.PRESENCE_TIMEOUT, b"\x00\x0a"),
+    ("LWR02", 3600, Command.PRESENCE_TIMEOUT, b"\x0e\x10"),
+    ("LWR01", 20, Command.TRIGGER_NOBODY_TIME, b"\x00\x00\x14\x00"),
+])
+async def test_presence_timeout_boundaries(model, seconds, command, payload) -> None:
+    client = LafaerProtocolClient("fd00::1", "pairing", model=model)
+    client._exchange = AsyncMock()
+    await client.async_set_presence_timeout(seconds)
+    client._exchange.assert_awaited_once_with(command, method="POST", data=payload)
+
+
+@pytest.mark.asyncio
 async def test_all_commands_are_serialized_and_paced_even_after_failure() -> None:
     client = LafaerProtocolClient("fd00::1", "pairing", model="LWR02")
     timestamps = []

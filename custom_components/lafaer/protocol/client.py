@@ -445,9 +445,18 @@ class LafaerProtocolClient:
             raise ValueError("radar range must contain 15 values in the range 0..2")
         await self._exchange(Command.RADAR_RANGE, method="POST", data=bytes(ranges))
 
-    async def async_set_thresholds(self, values: list[int], *, keep: bool) -> None:
-        if self.model != "LWR02" or len(values) != 15:
+    @staticmethod
+    def validate_thresholds(values: list[int]) -> None:
+        """Reject unsafe thresholds before any configuration is written."""
+        if len(values) != 15:
             raise ValueError("radar thresholds must contain 15 values")
+        if any(type(value) is not int or not 1 <= value <= 65535 for value in values):
+            raise ValueError("radar thresholds must be integers between 1 and 65535")
+
+    async def async_set_thresholds(self, values: list[int], *, keep: bool) -> None:
+        if self.model != "LWR02":
+            raise ValueError("radar thresholds require LWR02")
+        self.validate_thresholds(values)
         command = Command.RADAR_KEEP_THRESHOLD if keep else Command.RADAR_DETECTION_THRESHOLD
         await self._exchange(command, method="POST", data=pack_uint16_list(values))
 

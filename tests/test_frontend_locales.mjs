@@ -718,4 +718,54 @@ assert.equal(subscriptions,3,"simultaneous retry clicks create only one new subs
 await reconnect._closeSession();
 }
 
+{
+const timeoutPanel=new Panel();
+timeoutPanel._selected={model:"LWR02"};
+timeoutPanel._timeoutDraft=null;
+for(const language of ["en","zh-Hans","zh-Hant"]){
+  timeoutPanel._hass={language};
+  assert.match(timeoutPanel._renderModeSensing(), /id="timeout" type="number" required step="1" min="10" max="3600"/);
+}
+timeoutPanel._selected.model="LWR01";
+assert.match(timeoutPanel._renderModeSensing(), /id="timeout" type="number" required step="1" min="20" max="3600"/);
+timeoutPanel._selected.model="LWR02";
+let checks=0,actions=0;
+const field={value:"0",reportValidity(){checks++;return false;}};
+const save={};
+timeoutPanel.shadowRoot.querySelector=selector=>selector==="#timeout"?field:selector==="#save-mode"?save:null;
+timeoutPanel._action=async()=>{actions++;};
+timeoutPanel._bind();
+for(const invalid of ["0","","-1","9","10.5","3601"]){
+  field.value=invalid;
+  await save.onclick();
+}
+assert.equal(checks,6,"saving must invoke native required/range/step validation");
+assert.equal(actions,0,"invalid timeout must not submit any settings");
+}
+
+{
+const thresholdsPanel=new Panel();
+thresholdsPanel._selected={model:"LWR02"};
+thresholdsPanel.render=()=>{};
+for(const language of ["en","zh-Hans","zh-Hant"]){
+  thresholdsPanel._hass={language};
+  for(const key of ["detection_thresholds","keep_thresholds"]){
+    for(const invalid of [0,-1,65536,1.5,NaN]){
+      const data={work_mode:2,radar_sensitivity:3,detection_thresholds:Array(15).fill(1),keep_thresholds:Array(15).fill(65535)};
+      assert.equal(thresholdsPanel._validateThresholdSubmission(data),true);
+      data[key][14]=invalid;
+      assert.equal(thresholdsPanel._validateThresholdSubmission(data),false);
+      assert.equal(thresholdsPanel._error,thresholdsPanel.t.thresholdInvalid);
+      assert.equal(thresholdsPanel._energyOpen,true);
+      data.work_mode=0;
+      assert.equal(thresholdsPanel._validateThresholdSubmission(data),true,"PIR mode does not write radar thresholds");
+      data.work_mode=2;data.radar_sensitivity=1;
+      assert.equal(thresholdsPanel._validateThresholdSubmission(data),true,"presets do not write custom thresholds");
+    }
+  }
+}
+assert.match(source,/min="1" max="65535" required step="1"/);
+assert.match(source,/if\(!this\._validateThresholdSubmission\(data\)\)return;if\(await this\._action\("save_mode_sensing"/);
+}
+
 console.log("frontend locale and lifecycle checks passed");

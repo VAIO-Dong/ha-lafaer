@@ -25,6 +25,24 @@ class FakeHass:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("key", ["detection_thresholds", "keep_thresholds"])
+@pytest.mark.parametrize("invalid", [0, 1.5, -1, 65536])
+async def test_invalid_threshold_prevents_all_group_writes(key, invalid) -> None:
+    device = StoredDevice(device_id="test", model="LWR02", host="fd00::1")
+    session = session_module.DeviceSession(FakeHass(), device, FakeStore(device), FakeDebug())
+    session.client = AsyncMock()
+    data = {
+        "work_mode": 2, "radar_sensitivity": 3, "presence_timeout": 30,
+        "detection_thresholds": [100] * 15, "keep_thresholds": [80] * 15,
+    }
+    data[key][-1] = invalid
+    with pytest.raises(ValueError, match="integers between 1 and 65535"):
+        await session._async_save_mode_sensing(data)
+    assert not session.client.mock_calls
+    await session.async_close()
+
+
+@pytest.mark.asyncio
 async def test_background_and_unready_radar_do_not_send_energy_commands() -> None:
     device = StoredDevice(device_id="test", model="LWR02", host="fd00::1")
     session = session_module.DeviceSession(FakeHass(), device, FakeStore(device), FakeDebug())
