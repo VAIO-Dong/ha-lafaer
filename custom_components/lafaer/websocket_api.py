@@ -69,6 +69,7 @@ async def websocket_discover(
 ) -> None:
     controller = _controller(hass)
     controller.debug.add("discovery", "scan started")
+    revision = controller.store.discovery_revision
     try:
         devices = await controller.discovery.async_scan(msg["timeout"])
     except Exception as err:
@@ -76,7 +77,9 @@ async def websocket_discover(
         connection.send_error(msg["id"], "discovery_failed", str(err))
         return
 
-    cached_devices = await controller.store.async_update_discovery(devices)
+    cached_devices = await controller.store.async_update_discovery(
+        devices, expected_revision=revision
+    )
     output: list[dict[str, Any]] = []
     for device in cached_devices:
         public = device.as_public_dict()
@@ -363,6 +366,34 @@ async def websocket_rename_device(
     connection.send_result(msg["id"], device.as_public_dict())
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "lafaer/discovery/remove",
+        vol.Required("device_id"): str,
+        vol.Required("model"): vol.In(SUPPORTED_MODELS),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_remove_discovery(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Remove only a local discovery record; do not contact the sensor."""
+    await _controller(hass).store.async_remove_discovery(msg["device_id"], msg["model"])
+    connection.send_result(msg["id"])
+
+
+@websocket_api.websocket_command({vol.Required("type"): "lafaer/discovery/clear_history"})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_clear_discovery_history(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Remove historical discoveries only, leaving managed devices intact."""
+    await _controller(hass).store.async_clear_discovery_history()
+    connection.send_result(msg["id"])
+
+
 @websocket_api.websocket_command({vol.Required("type"): "lafaer/debug/list"})
 @websocket_api.async_response
 async def websocket_debug_list(
@@ -386,6 +417,8 @@ async def websocket_debug_clear(
 
 
 COMMANDS = (
+    websocket_remove_discovery,
+    websocket_clear_discovery_history,
     websocket_list_devices,
     websocket_discover,
     websocket_adopt_device,

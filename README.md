@@ -79,6 +79,15 @@ takeover is available in the top-right menu.
 Availability reflects the latest discovery result. Check **Last seen** if a
 device appears available but cannot be opened.
 
+Managed devices can be renamed or removed directly from the list, even when
+offline. Removal clears only this integration's local management record and
+cached discovery; it does not reset the sensor or remove it from Matter.
+
+Devices not found in the latest scan appear under the collapsed **Discovery
+history** section. Remove individual discovery records or use **Clear history**
+to clear all historical records, keeping managed devices and current discoveries.
+Removed discoveries can appear again when found in a later scan.
+
 ![Managed and discovered sensors](assets/screenshots/device-list.png)
 
 ### View readings and control a device

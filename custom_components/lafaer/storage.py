@@ -22,6 +22,7 @@ class DeviceStore:
         self._devices: dict[str, StoredDevice] = {}
         self._discovered: dict[str, DiscoveredDevice] = {}
         self._lock = asyncio.Lock()
+        self.discovery_revision = 0
 
     async def async_load(self) -> None:
         raw = await self._store.async_load() or {}
@@ -52,10 +53,12 @@ class DeviceStore:
         )
 
     async def async_update_discovery(
-        self, devices: list[DiscoveredDevice]
+        self, devices: list[DiscoveredDevice], *, expected_revision: int | None = None
     ) -> list[DiscoveredDevice]:
         """Cache one complete scan and mark records not seen this time offline."""
         async with self._lock:
+            if expected_revision is not None and expected_revision != self.discovery_revision:
+                return self.list_discovered()
             for cached in self._discovered.values():
                 cached.available = False
 
@@ -76,6 +79,31 @@ class DeviceStore:
     async def async_remove_device(self, device_id: str) -> None:
         async with self._lock:
             self._devices.pop(device_id, None)
+            self._discovered = {
+                key: item for key, item in self._discovered.items()
+                if item.device_id != device_id
+            }
+            self.discovery_revision += 1
+            await self._async_save()
+
+    async def async_remove_discovery(self, device_id: str, model: str) -> None:
+        """Forget a discovery record, never device ownership or credentials."""
+        async with self._lock:
+            self._discovered.pop(f"{model}:{device_id}", None)
+            self.discovery_revision += 1
+            await self._async_save()
+
+    async def async_clear_discovery_history(self) -> None:
+        """Clear unseen, unmanaged records without touching current discoveries."""
+        async with self._lock:
+            self._discovered = {
+                key: item for key, item in self._discovered.items()
+                if item.available or (
+                    item.device_id in self._devices
+                    and self._devices[item.device_id].model == item.model
+                )
+            }
+            self.discovery_revision += 1
             await self._async_save()
 
     async def _async_save(self) -> None:

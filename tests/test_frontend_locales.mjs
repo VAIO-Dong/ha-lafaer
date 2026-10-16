@@ -768,4 +768,66 @@ assert.match(source,/min="1" max="65535" required step="1"/);
 assert.match(source,/if\(!this\._validateThresholdSubmission\(data\)\)return;if\(await this\._action\("save_mode_sensing"/);
 }
 
+{
+const listPanel=new Panel();
+listPanel._view="list";listPanel._hasScanned=true;
+listPanel.render=()=>{};
+const managed={device_id:"managed",model:"LWR02",name:"Offline sensor",available:false};
+const historical={device_id:"old",model:"LWR02",name:"Old discovery",available:false};
+const current={device_id:"new",model:"LWR02",name:"Current discovery",available:true};
+const requests=[];
+listPanel._hass={language:"en",callWS:async request=>{requests.push(request);}};
+listPanel._devices=[managed];listPanel._discovered=[managed,historical,current];
+for(const language of ["en","zh-Hans","zh-Hant"]){
+  listPanel._hass.language=language;
+  const card=listPanel._deviceCard(managed,{adopted:true});
+  assert.match(card,/data-rename="managed"/);
+  assert.match(card,/data-forget-device="managed"/);
+  assert.doesNotMatch(card,/role="menu"/);
+  const markup=listPanel._renderList();
+  assert.match(markup,/<details id="discovery-history" >/,"history starts collapsed");
+  assert.match(markup,/id="clear-history"/);
+  const history=markup.slice(markup.indexOf('<details id="discovery-history"'));
+  assert.match(history,/data-remove-record="old"/);
+  assert.doesNotMatch(history,/data-adopt=|data-remove-record="new"/);
+}
+listPanel._dialog=async()=>false;
+await listPanel._forgetDevice(managed);await listPanel._removeDiscovery(historical);
+assert.equal(requests.length,0,"cancelling leaves local and remote state untouched");
+listPanel._dialog=async()=>true;
+await listPanel._forgetDevice(managed);
+assert.equal(requests[0].type,"lafaer/device/forget");
+assert.equal(listPanel._devices.length,0);
+assert.equal(listPanel._discovered.some(d=>d.device_id==="managed"),false);
+assert.equal(listPanel._selected,undefined,"offline removal must not open the device");
+await listPanel._removeDiscovery(historical);
+assert.equal(requests[1].type,"lafaer/discovery/remove");
+assert.equal(listPanel._discovered.length,1);
+listPanel._discovered.push(historical);
+await listPanel._removeDiscovery();
+assert.equal(requests[2].type,"lafaer/discovery/clear_history");
+assert.deepEqual(listPanel._discovered,[current]);
+// Failed removal must keep the displayed record.
+listPanel._hass.callWS=async()=>{throw new Error("failed");};
+await listPanel._removeDiscovery(current);
+assert.deepEqual(listPanel._discovered,[current]);
+}
+
+{
+const scanPanel=new Panel();
+scanPanel.render=()=>{};
+scanPanel._dialog=async()=>true;
+scanPanel._discovered=[{device_id:"old",model:"LWR02",available:false}];
+let finishScan;
+scanPanel._hass={language:"en",callWS:async request=>{
+  if(request.type==="lafaer/discover")return new Promise(resolve=>{finishScan=resolve;});
+  if(request.type==="lafaer/devices/list")return [];
+}};
+const scanning=scanPanel._scan();
+await scanPanel._removeDiscovery(scanPanel._discovered[0]);
+finishScan([{device_id:"old",model:"LWR02",available:true}]);
+await scanning;
+assert.equal(scanPanel._discovered.length,0,"late scan response cannot undo a deletion");
+}
+
 console.log("frontend locale and lifecycle checks passed");

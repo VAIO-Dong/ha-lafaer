@@ -9,6 +9,8 @@ SOURCE_PATH = (
     Path(__file__).parents[1] / "custom_components" / "lafaer" / "websocket_api.py"
 )
 ADMIN_COMMANDS = {
+    "websocket_remove_discovery",
+    "websocket_clear_discovery_history",
     "websocket_adopt_device",
     "websocket_device_action",
     "websocket_forget_device",

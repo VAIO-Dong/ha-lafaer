@@ -37,7 +37,7 @@ core.HomeAssistant = object
 helpers.storage = ha_storage
 homeassistant.helpers = helpers
 
-from custom_components.lafaer.protocol.models import DiscoveredDevice  # noqa: E402
+from custom_components.lafaer.protocol.models import DiscoveredDevice, StoredDevice  # noqa: E402
 from custom_components.lafaer.storage import DeviceStore  # noqa: E402
 
 
@@ -96,3 +96,53 @@ async def test_discovery_cache_survives_reload_as_offline() -> None:
     assert cached is not None
     assert cached.available is False
     assert cached.last_seen is not None
+
+
+async def test_forgetting_offline_device_removes_credentials_and_discovery() -> None:
+    store = DeviceStore(object())
+    await store.async_save_device(StoredDevice(
+        device_id="old", model="LWR02", host="fd00::1", pairing_material="private"
+    ))
+    await store.async_update_discovery([
+        DiscoveredDevice(device_id="old", model="LWR02", host="fd00::1")
+    ])
+    await store.async_update_discovery([])
+    await store.async_remove_device("old")
+    assert store.get("old") is None
+    assert store.list_discovered() == []
+    await store.async_load()
+    assert store.get("old") is None
+    assert store.list_discovered() == []
+
+
+async def test_clear_history_keeps_managed_and_current_discoveries() -> None:
+    store = DeviceStore(object())
+    records = [DiscoveredDevice(device_id=key, model="LWR02", host="fd00::1")
+               for key in ("managed", "historical", "current")]
+    await store.async_update_discovery(records)
+    await store.async_save_device(StoredDevice(
+        device_id="managed", model="LWR02", host="fd00::1", pairing_material="private"
+    ))
+    await store.async_update_discovery([records[2]])
+    await store.async_clear_discovery_history()
+    assert {item.device_id for item in store.list_discovered()} == {"managed", "current"}
+    assert store.get("managed").pairing_material == "private"
+    await store.async_load()
+    assert {item.device_id for item in store.list_discovered()} == {"managed", "current"}
+
+
+async def test_delete_single_record_and_prevent_inflight_scan_resurrection() -> None:
+    store = DeviceStore(object())
+    records = [DiscoveredDevice(device_id="same-id", model=model, host="fd00::1")
+               for model in ("LWR01", "LWR02")]
+    await store.async_update_discovery(records)
+    old_revision = store.discovery_revision
+    await store.async_remove_discovery("same-id", "LWR02")
+    await store.async_update_discovery(records, expected_revision=old_revision)
+    assert store.get_discovered("same-id", "LWR02") is None
+    assert store.get_discovered("same-id", "LWR01") is not None
+    await store.async_load()
+    assert store.get_discovered("same-id", "LWR02") is None
+    # A subsequent, explicitly started scan can discover it again.
+    await store.async_update_discovery(records, expected_revision=store.discovery_revision)
+    assert store.get_discovered("same-id", "LWR02") is not None
