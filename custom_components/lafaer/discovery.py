@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
+from ipaddress import IPv6Address, ip_address
 
 from homeassistant.components import zeroconf as ha_zeroconf
 from homeassistant.core import HomeAssistant
@@ -11,6 +13,43 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
 
 from .const import DISCOVERY_TIMEOUT, SERVICE_TYPE, SUPPORTED_MODELS
 from .protocol.models import DiscoveredDevice
+
+MATTER_SERVICE_TYPE = "_matter._tcp.local."
+
+
+def _matching_addresses(addresses: list[str]) -> set[str]:
+    """Use only unambiguous, routable IPv6 host addresses for correlation."""
+    result = set()
+    for value in addresses:
+        try:
+            address = ip_address(value)
+        except ValueError:
+            continue
+        if isinstance(address, IPv6Address) and not (
+            address.is_link_local or address.is_multicast
+            or address.is_unspecified or address.is_loopback
+        ):
+            result.add(str(address))
+    return result
+
+
+def _apply_icd_metadata(
+    found: dict[tuple[str, str], DiscoveredDevice],
+    addresses: dict[tuple[str, str], set[str]],
+    matter: dict[str, tuple[set[str], bool | None]],
+) -> None:
+    """Match explicit Matter LIT flags; absence is not evidence of non-ICD."""
+    seen_at = datetime.now(UTC).isoformat()
+    for key, device in found.items():
+        own = addresses.get(key, set())
+        others = set().union(*(value for other, value in addresses.items() if other != key))
+        unique = own - others
+        flags = {
+            flag for hosts, flag in matter.values()
+            if flag is not None and unique.intersection(hosts)
+        }
+        device.icd_lit = next(iter(flags)) if len(flags) == 1 else None
+        device.icd_last_seen = seen_at if device.icd_lit is not None else None
 
 
 def _decode_properties(properties: dict[bytes, bytes | None]) -> dict[str, str]:
@@ -36,6 +75,8 @@ class OnDemandDiscovery:
         async with self._lock:
             async_zeroconf = await ha_zeroconf.async_get_async_instance(self._hass)
             found: dict[tuple[str, str], DiscoveredDevice] = {}
+            device_addresses: dict[tuple[str, str], set[str]] = {}
+            matter: dict[str, tuple[set[str], bool | None]] = {}
             tasks: set[asyncio.Task[None]] = set()
 
             async def resolve(service_type: str, name: str) -> None:
@@ -43,6 +84,13 @@ class OnDemandDiscovery:
                 if not await info.async_request(async_zeroconf.zeroconf, 3000):
                     return
                 properties = _decode_properties(info.properties)
+                if service_type == MATTER_SERVICE_TYPE:
+                    raw_icd = properties.get("ICD")
+                    matter[name] = (
+                        _matching_addresses(info.parsed_scoped_addresses(IPVersion.V6Only)),
+                        raw_icd == "1" if raw_icd in ("0", "1") else None,
+                    )
+                    return
                 model = properties.get("mn", "").upper()
                 if model not in SUPPORTED_MODELS:
                     return
@@ -62,6 +110,7 @@ class OnDemandDiscovery:
                 if not device_id:
                     return
                 uid = properties.get("uid") or None
+                device_addresses[(model, device_id)] = _matching_addresses(addresses)
                 found[(model, device_id)] = DiscoveredDevice(
                     device_id=device_id,
                     model=model,
@@ -80,6 +129,7 @@ class OnDemandDiscovery:
                 state_change: ServiceStateChange,
             ) -> None:
                 if state_change is ServiceStateChange.Removed:
+                    matter.pop(name, None)
                     return
                 task = self._hass.async_create_task(resolve(service_type, name))
                 tasks.add(task)
@@ -87,7 +137,7 @@ class OnDemandDiscovery:
 
             browser = AsyncServiceBrowser(
                 async_zeroconf.zeroconf,
-                SERVICE_TYPE,
+                [SERVICE_TYPE, MATTER_SERVICE_TYPE],
                 handlers=[on_change],
             )
             try:
@@ -96,4 +146,5 @@ class OnDemandDiscovery:
                 await browser.async_cancel()
                 if tasks:
                     await asyncio.gather(*tasks, return_exceptions=True)
+            _apply_icd_metadata(found, device_addresses, matter)
             return sorted(found.values(), key=lambda item: (item.model, item.device_id))

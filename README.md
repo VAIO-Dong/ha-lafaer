@@ -79,6 +79,11 @@ takeover is available in the top-right menu.
 Availability reflects the latest discovery result. Check **Last seen** if a
 device appears available but cannot be opened.
 
+An **ICD** badge identifies a sensor detected in Matter long idle time (LIT)
+mode. Hover over or tap the badge for details. The sensor may be asleep, making
+connections slower or causing a timeout. Briefly press its button to wake it,
+then try connecting again. No badge does not necessarily mean a device is not ICD.
+
 Managed devices can be renamed or removed directly from the list, even when
 offline. Removal clears only this integration's local management record and
 cached discovery; it does not reset the sensor or remove it from Matter.

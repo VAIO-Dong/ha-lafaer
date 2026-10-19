@@ -71,6 +71,27 @@ async def test_discovery_cache_marks_unseen_devices_offline() -> None:
     assert updated[0].last_seen == first_seen
 
 
+async def test_icd_metadata_survives_reload_and_can_be_cleared_by_new_scan() -> None:
+    store = DeviceStore(object())
+    await store.async_update_discovery([
+        DiscoveredDevice(
+            device_id="icd", model="LWR02", host="fd00::1",
+            icd_lit=True, icd_last_seen="2026-10-19T00:00:00+00:00",
+        )
+    ])
+    await store.async_load()
+    cached = store.get_discovered("icd", "LWR02")
+    assert cached.icd_lit is True
+    assert cached.icd_last_seen == "2026-10-19T00:00:00+00:00"
+    assert cached.available is False
+    await store.async_update_discovery([
+        DiscoveredDevice(device_id="icd", model="LWR02", host="fd00::1")
+    ])
+    cached = store.get_discovered("icd", "LWR02")
+    assert cached.icd_lit is None
+    assert cached.icd_last_seen is None
+
+
 async def test_discovery_cache_survives_reload_as_offline() -> None:
     store = DeviceStore(object())
     await store.async_update_discovery(

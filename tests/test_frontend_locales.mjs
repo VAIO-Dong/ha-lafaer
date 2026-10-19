@@ -40,6 +40,11 @@ for (const key of [
   "radarModeRequired",
   "thresholdValue",
   "connectingDevice",
+  "icdTitle",
+  "icdDescription",
+  "icdConnectingHint",
+  "icdLastSeen",
+  "gotIt",
   "connectionFailed",
   "connectionFailedHint",
   "retry",
@@ -528,6 +533,16 @@ acceptClick();
 assert.equal(await legacyConfirmation,true);
 delete dialog.heading;
 
+for(const legacy of [false,true]){
+  if(legacy)dialog.heading="";
+  const information=panel._dialog({title:"ICD",text:"Wake the device",accept:"Got it",informational:true});
+  assert.doesNotMatch(dialog.markup,/data-cancel/);
+  assert.match(dialog.markup,/data-accept>Got it<\/ha-button>/);
+  acceptClick();
+  assert.equal(await information,true);
+  delete dialog.heading;
+}
+
 const requests=[];
 panel._hass.callWS=async request=>{requests.push(request);};
 panel._load=async()=>{};
@@ -783,12 +798,21 @@ for(const language of ["en","zh-Hans","zh-Hant"]){
   const card=listPanel._deviceCard(managed,{adopted:true});
   assert.match(card,/data-rename="managed"/);
   assert.match(card,/data-forget-device="managed"/);
+  assert.match(card,/<span class="device-name-actions"><button[^>]+data-rename="managed"[^>]+aria-label=/);
+  assert.match(card,/<button type="button" class="device-icon-action" data-forget-device="managed"[^>]+aria-label=/);
+  assert.match(card,/mdi:delete-outline/);
+  assert.doesNotMatch(card,/<ha-button[^>]+data-forget-device=/);
+  assert.ok(card.indexOf('data-rename="managed"')<card.indexOf('data-forget-device="managed"'));
+  assert.match(card,/<ha-button data-open="managed"/);
   assert.doesNotMatch(card,/role="menu"/);
   const markup=listPanel._renderList();
   assert.match(markup,/<details id="discovery-history" >/,"history starts collapsed");
   assert.match(markup,/id="clear-history"/);
+  assert.match(markup,/<summary><span class="history-title">[^<]+<\/span><ha-button id="clear-history" appearance="plain"/);
+  assert.doesNotMatch(markup,/history-actions/);
   const history=markup.slice(markup.indexOf('<details id="discovery-history"'));
   assert.match(history,/data-remove-record="old"/);
+  assert.match(history,/<ha-button appearance="plain" class="secondary-action" data-remove-record=/);
   assert.doesNotMatch(history,/data-adopt=|data-remove-record="new"/);
 }
 listPanel._dialog=async()=>false;
@@ -831,3 +855,53 @@ assert.equal(scanPanel._discovered.length,0,"late scan response cannot undo a de
 }
 
 console.log("frontend locale and lifecycle checks passed");
+
+{
+const icdPanel=new Panel();
+const device={device_id:"sleepy",model:"LWR02",name:"Bedroom",icd_lit:true,icd_last_seen:"2026-10-19T07:00:00Z"};
+icdPanel._selected=device;icdPanel._devices=[device];icdPanel._hasScanned=true;
+for(const language of ["en","zh-Hans","zh-Hant"]){
+  icdPanel._hass={language};
+  const card=icdPanel._deviceCard(device,{adopted:true});
+  assert.match(card,/<button type="button" class="icd-badge".*aria-haspopup="dialog">ICD<\/button>/s);
+  assert.ok(card.includes(icdPanel.t.icdDescription));
+  assert.ok(card.includes(icdPanel.t.icdLastSeen));
+  icdPanel._connecting=true;icdPanel._snapshot=null;
+  assert.ok(icdPanel._renderConnection().includes(icdPanel.t.icdConnectingHint));
+  icdPanel._connecting=false;icdPanel._snapshot={error:"timeout"};
+  assert.ok(icdPanel._renderConnection().includes(icdPanel.t.icdConnectingHint));
+  let shown;
+  icdPanel._dialog=async options=>{shown=options;};
+  await icdPanel._showICD(device);
+  assert.equal(shown.informational,true);
+  assert.equal(shown.accept,icdPanel.t.gotIt);
+  assert.ok(shown.text.includes(icdPanel.t.icdDescription));
+}
+for(const flag of [false,null,undefined]){
+  icdPanel._discovered=[{...device,icd_lit:flag}];
+  assert.equal(icdPanel._icdBadge(device),"","new unknown/non-LIT result overrides old badge");
+  assert.ok(!icdPanel._renderConnection().includes(icdPanel.t.icdConnectingHint));
+}
+icdPanel._discovered=[];
+const button={dataset:{icd:"sleepy",model:"LWR02"}};
+icdPanel.shadowRoot.querySelectorAll=selector=>selector==="[data-icd]"?[button]:[];
+let shown,stopped=false;
+icdPanel._showICD=device=>{shown=device;};
+icdPanel._bind();button.onclick({stopPropagation(){stopped=true;}});
+assert.equal(shown,device);assert.equal(stopped,true);
+}
+
+{
+const panel=new Panel();
+panel._hass={language:"en"};
+const button={};
+panel.shadowRoot.querySelector=selector=>selector==="#clear-history"?button:null;
+let cleared=0,prevented=0,stopped=0;
+panel._removeDiscovery=()=>{cleared++;};
+panel._bind();
+button.onclick({preventDefault(){prevented++;},stopPropagation(){stopped++;}});
+assert.equal(cleared,1);
+assert.equal(prevented,1,"clear action must not toggle the history section");
+button.onkeydown({stopPropagation(){stopped++;}});
+assert.equal(stopped,2,"keyboard activation must not bubble to summary");
+}

@@ -39,6 +39,8 @@ def _stored_public(controller: LafaerController, device: StoredDevice) -> dict[s
     if cached is not None:
         public["available"] = cached.available
         public["last_seen"] = cached.last_seen
+        public["icd_lit"] = cached.icd_lit
+        public["icd_last_seen"] = cached.icd_last_seen
     return public
 
 
@@ -68,35 +70,11 @@ async def websocket_discover(
     msg: dict[str, Any],
 ) -> None:
     controller = _controller(hass)
-    controller.debug.add("discovery", "scan started")
-    revision = controller.store.discovery_revision
     try:
-        devices = await controller.discovery.async_scan(msg["timeout"])
+        output = await controller.async_discover(msg["timeout"])
     except Exception as err:
-        controller.debug.add("discovery", "scan failed", level="error", data={"error": str(err)})
-        connection.send_error(msg["id"], "discovery_failed", str(err))
+        connection.send_error(msg["id"], "discovery_failed", exception_summary(err))
         return
-
-    cached_devices = await controller.store.async_update_discovery(
-        devices, expected_revision=revision
-    )
-    output: list[dict[str, Any]] = []
-    for device in cached_devices:
-        public = device.as_public_dict()
-        stored = controller.store.get(device.device_id)
-        public["adopted"] = stored is not None and stored.model == device.model
-        output.append(public)
-        if device.available and stored is not None and stored.model == device.model:
-            stored.host = device.host
-            stored.version = device.version
-            if device.blue_id:
-                stored.blue_id = device.blue_id
-            await controller.store.async_save_device(stored)
-    controller.debug.add(
-        "discovery",
-        "scan finished",
-        data={"device_count": len(devices), "cached_device_count": len(output)},
-    )
     connection.send_result(msg["id"], output)
 
 

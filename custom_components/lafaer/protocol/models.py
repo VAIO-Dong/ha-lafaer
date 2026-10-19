@@ -22,6 +22,8 @@ class DiscoveredDevice:
     name: str | None = None
     last_seen: str | None = None
     available: bool = False
+    icd_lit: bool | None = None
+    icd_last_seen: str | None = None
 
     def as_public_dict(self) -> dict[str, Any]:
         return asdict(self)
