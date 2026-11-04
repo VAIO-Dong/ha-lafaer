@@ -69,7 +69,9 @@ def test_address_normalization_and_unreliable_address_exclusion(discovery_module
     ]) == {"fd00::1"}
 
 
-@pytest.mark.parametrize("raw,expected", [(b"1", True), (b"0", False), (b"invalid", None)])
+@pytest.mark.parametrize("raw,expected", [
+    (b"1", True), (b"0", False), (b"invalid", None), (None, None),
+])
 async def test_scan_resolves_both_services_in_same_window(
     discovery_module, monkeypatch, raw, expected
 ):
@@ -89,6 +91,8 @@ async def test_scan_resolves_both_services_in_same_window(
 
         async def async_request(self, zeroconf, request_timeout):
             await asyncio.sleep(0)
+            if raw is None and b"ICD" in self.properties:
+                raise OSError("optional Matter lookup failed")
             return True
 
         def parsed_scoped_addresses(self, version):
@@ -112,3 +116,93 @@ async def test_scan_resolves_both_services_in_same_window(
     assert len(devices) == 1
     assert devices[0].icd_lit is expected
     assert bool(devices[0].icd_last_seen) is (expected is not None)
+
+
+async def test_device_streams_before_late_icd_and_before_scan_completion(
+    discovery_module, monkeypatch
+):
+    module = discovery_module
+    module.ha_zeroconf.async_get_async_instance = AsyncMock(
+        return_value=types.SimpleNamespace(zeroconf=object())
+    )
+    first, icd_ready, finish_matter = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    cancelled = []
+    events = []
+    handler = None
+
+    class Info:
+        def __init__(self, service_type, name):
+            self.matter = service_type == module.MATTER_SERVICE_TYPE
+            self.properties = {b"ICD": b"1"} if self.matter else {
+                b"mn": b"LWR02", b"devid": b"sensor"
+            }
+
+        async def async_request(self, zeroconf, request_timeout):
+            if self.matter:
+                await finish_matter.wait()
+            return True
+
+        def parsed_scoped_addresses(self, version):
+            return ["fd00::1"]
+
+    class Browser:
+        def __init__(self, zeroconf, types_, handlers):
+            nonlocal handler
+            handler = handlers[0]
+            for service_type in types_:
+                handler(zeroconf, service_type, f"test.{service_type}", "added")
+
+        async def async_cancel(self):
+            cancelled.append(True)
+
+    async def update(devices):
+        events.append([device.as_public_dict() for device in devices])
+        if devices:
+            first.set()
+            if devices[0].icd_lit:
+                icd_ready.set()
+            # The real store mutates these copies; this must not cause duplicate updates.
+            devices[0].last_seen = "saved"
+
+    monkeypatch.setattr(module, "AsyncServiceInfo", Info)
+    monkeypatch.setattr(module, "AsyncServiceBrowser", Browser)
+    hass = types.SimpleNamespace(async_create_task=asyncio.create_task)
+    scan = asyncio.create_task(module.OnDemandDiscovery(hass).async_scan(15, on_update=update))
+    try:
+        await asyncio.wait_for(first.wait(), 2)
+        assert not scan.done()
+        assert events[0][0]["icd_lit"] is None
+        finish_matter.set()
+        await asyncio.wait_for(icd_ready.wait(), 2)
+        assert not scan.done()
+        assert events[-1][0]["icd_lit"] is True
+        count = len(events)
+        handler(None, module.MATTER_SERVICE_TYPE, "another-fabric", "added")
+        await asyncio.sleep(0.25)
+        assert len(events) == count
+    finally:
+        scan.cancel()
+        await asyncio.gather(scan, return_exceptions=True)
+    assert cancelled == [True]
+
+
+async def test_browser_creation_failure_does_not_leak_publisher(discovery_module, monkeypatch):
+    module = discovery_module
+    module.ha_zeroconf.async_get_async_instance = AsyncMock(
+        return_value=types.SimpleNamespace(zeroconf=object())
+    )
+    tasks = []
+
+    def create_task(coroutine):
+        task = asyncio.create_task(coroutine)
+        tasks.append(task)
+        return task
+
+    def fail(*args, **kwargs):
+        raise OSError("browser unavailable")
+
+    monkeypatch.setattr(module, "AsyncServiceBrowser", fail)
+    hass = types.SimpleNamespace(async_create_task=create_task)
+    with pytest.raises(OSError):
+        await module.OnDemandDiscovery(hass).async_scan()
+    assert tasks and all(task.done() for task in tasks)

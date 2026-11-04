@@ -167,3 +167,45 @@ async def test_delete_single_record_and_prevent_inflight_scan_resurrection() -> 
     # A subsequent, explicitly started scan can discover it again.
     await store.async_update_discovery(records, expected_revision=store.discovery_revision)
     assert store.get_discovered("same-id", "LWR02") is not None
+
+
+async def test_partial_discovery_updates_address_without_marking_others_absent() -> None:
+    store = DeviceStore(object())
+    old = DiscoveredDevice(device_id="old", model="LWR02", host="fd00::1")
+    await store.async_update_discovery([old])
+    await store.async_save_device(StoredDevice(
+        device_id="new", model="LWR02", host="fd00::2", name="Bedroom", pairing_material="key"
+    ))
+    fresh = DiscoveredDevice(device_id="new", model="LWR02", host="fd00::3", icd_lit=True)
+    await store.async_update_discovery([fresh], complete=False)
+    assert old.available is True
+    assert store.get("new").host == "fd00::3"
+    assert store.get("new").icd_lit is True
+    assert store.get("new").name == "Bedroom"
+    assert store.get("new").pairing_material == "key"
+    await store.async_update_discovery([fresh])
+    assert old.available is False
+
+
+async def test_deleted_record_does_not_block_unrelated_live_results() -> None:
+    store = DeviceStore(object())
+    deleted = DiscoveredDevice(device_id="deleted", model="LWR02", host="fd00::1")
+    fresh = DiscoveredDevice(device_id="fresh", model="LWR02", host="fd00::2")
+    await store.async_update_discovery([deleted])
+    revision = store.discovery_revision
+    await store.async_remove_discovery("deleted", "LWR02")
+    for complete in (False, True):
+        await store.async_update_discovery([deleted, fresh], expected_revision=revision,
+                                          complete=complete)
+        assert store.get_discovered("deleted", "LWR02") is None
+        assert store.get_discovered("fresh", "LWR02") is not None
+
+
+async def test_clear_pending_history_uses_current_round_not_old_availability() -> None:
+    store = DeviceStore(object())
+    await store.async_update_discovery([
+        DiscoveredDevice(device_id=key, model="LWR02", host="fd00::1")
+        for key in ("old", "current")
+    ])
+    await store.async_clear_discovery_history(current_seen={("LWR02", "current")})
+    assert [device.device_id for device in store.list_discovered()] == ["current"]

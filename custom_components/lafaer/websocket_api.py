@@ -78,6 +78,19 @@ async def websocket_discover(
     connection.send_result(msg["id"], output)
 
 
+@websocket_api.websocket_command({vol.Required("type"): "lafaer/discovery/subscribe"})
+@websocket_api.async_response
+async def websocket_subscribe_discovery(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Replay cached devices immediately and stream the bounded shared scan."""
+    controller = _controller(hass)
+    connection.send_result(msg["id"])
+    connection.subscriptions[msg["id"]] = controller.subscribe_discovery(
+        lambda event: connection.send_event(msg["id"], event)
+    )
+
+
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "lafaer/device/adopt",
@@ -175,6 +188,7 @@ async def websocket_adopt_device(
         data={"device_id": device.device_id, "model": device.model},
     )
     connection.send_result(msg["id"], _stored_public(controller, device))
+    controller.publish_discovery()
 
 
 @websocket_api.websocket_command(
@@ -311,6 +325,7 @@ async def websocket_forget_device(
         if controller.sessions.sessions.get(msg["device_id"]) is session:
             controller.sessions.sessions.pop(msg["device_id"], None)
     controller.debug.add("storage", "device forgotten locally")
+    controller.publish_discovery()
     connection.send_result(msg["id"])
 
 
@@ -341,6 +356,7 @@ async def websocket_rename_device(
     device.name = name
     await controller.store.async_save_device(device)
     controller.debug.add("storage", "device renamed locally")
+    controller.publish_discovery()
     connection.send_result(msg["id"], device.as_public_dict())
 
 
@@ -358,6 +374,7 @@ async def websocket_remove_discovery(
 ) -> None:
     """Remove only a local discovery record; do not contact the sensor."""
     await _controller(hass).store.async_remove_discovery(msg["device_id"], msg["model"])
+    _controller(hass).publish_discovery()
     connection.send_result(msg["id"])
 
 
@@ -368,7 +385,7 @@ async def websocket_clear_discovery_history(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Remove historical discoveries only, leaving managed devices intact."""
-    await _controller(hass).store.async_clear_discovery_history()
+    await _controller(hass).async_clear_discovery_history()
     connection.send_result(msg["id"])
 
 
@@ -395,6 +412,7 @@ async def websocket_debug_clear(
 
 
 COMMANDS = (
+    websocket_subscribe_discovery,
     websocket_remove_discovery,
     websocket_clear_discovery_history,
     websocket_list_devices,

@@ -76,8 +76,13 @@ takeover is available in the top-right menu.
 > key, so the App can no longer manage it. Pairing through the App again
 > invalidates Home Assistant's key.
 
-Availability reflects the latest discovery result. Check **Last seen** if a
-device appears available but cannot be opened.
+Saved devices and discovery history appear immediately. New discoveries appear
+as the scan progresses, so you can open or take over a device without waiting
+for the scan to finish. Multiple open panels share the same scan.
+
+**Discovered** means the device's service was found, not that a management
+connection has succeeded. **Not found this time** is shown only after a complete
+scan. Check **Last seen** if a discovered device cannot be opened.
 
 An **ICD** badge identifies a sensor detected in Matter long idle time (LIT)
 mode. Hover over or tap the badge for details. The sensor may be asleep, making

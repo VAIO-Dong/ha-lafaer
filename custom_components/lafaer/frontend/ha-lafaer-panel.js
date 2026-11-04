@@ -25,7 +25,7 @@ const WORDS = {
     thresholdInvalid: "Radar thresholds must be whole numbers between 1 and 65535. Zero is not allowed.",
     learningStart: "Start Self-Learning",
     learningTip: "Please remove any devices that might cause interference from the detection area and install the device in an appropriate location. Tap the button below to start Auto-Adaptation. Once started, please leave the detection area immediately within 30 seconds. This feature will intelligently optimize the radar sensitivity parameters based on your current environment for a better experience.",
-    title: "Lafaer", devices: "Devices", scan: "Scan", scanning: "Scanning…",
+    title: "Lafaer", devices: "Devices", scan: "Scan", scanning: "Searching…", scanFailed: "Search failed. Please try again.", previouslyDiscovered: "Previously discovered", discoveryUnknown: "Not checked",
     noDevices: "No devices scanned", disconnected: "Disconnected", connected: "Connected",
     open: "Open", takeover: "Take over", takeoverTitle: "Take over this device?",
     takeoverWarning: "The sensor stores one management key.\nHome Assistant will replace the App key, and the App will no longer manage this sensor.",
@@ -50,7 +50,7 @@ const WORDS = {
     distance: "Detection distance", externalPower: "External power", powerSource: "Power source", batterySource: "Battery", usbSource: "USB", usbBatterySource: "USB + battery",
     serialNumber: "Serial number", firmware: "Firmware", radarFirmware: "Radar Version", threadNetwork: "Thread Network Name", signal: "Signal", ipv6: "IPv6",
     adoptedDevices: "Managed by Home Assistant", discoveredDevices: "Discovered devices", noAdopted: "No devices have been taken over yet.",
-    noDiscovered: "No other Lafaer devices have been discovered.", available: "Available", offline: "Offline", checking: "Checking…", lastSeen: "Last seen",
+    noDiscovered: "No other Lafaer devices have been discovered.", available: "Discovered", offline: "Not found this time", checking: "Checking…", lastSeen: "Last seen",
     adoptedHelp: "View sensor status and manage device settings.",
     discoveredHelp: "Select a device to let Home Assistant manage it.",
     takeoverConnecting: "Connecting and authenticating…", takeoverFailed: "Takeover failed", takeoverSucceeded: "Takeover completed",
@@ -89,7 +89,7 @@ const WORDS = {
     thresholdInvalid: "雷达阈值须为 1–65535 的整数，不能设置为 0。",
     learningStart: "开始自学习",
     learningTip: "请尽量移除检测区域内任何可能干扰的设备。并将设备安装到合适位置。点击下方按钮开始自动适应。启动后，请在30秒内离开检测区域。\n自适应功能将根据当前环境，智能优化雷达灵敏度参数，为您带来更佳体验。",
-    title: "Lafaer", devices: "设备", scan: "扫描", scanning: "正在扫描…", noDevices: "未扫描到设备",
+    title: "Lafaer", devices: "设备", scan: "扫描", scanning: "正在搜索…", scanFailed: "搜索失败，请重试。", previouslyDiscovered: "曾发现", discoveryUnknown: "尚未确认", noDevices: "未扫描到设备",
     disconnected: "未连接", connected: "已连接", open: "打开", takeover: "接管",
     takeoverTitle: "接管此设备？", takeoverWarning: "传感器只能保存一套管理密钥。\nHome Assistant 将覆盖 App 密钥，此后 App 无法继续管理该传感器。",
     pairHint: "请长按传感器按钮 3 秒，直到指示灯缓慢闪烁，然后确认。", cancel: "取消", confirm: "确认",
@@ -112,7 +112,7 @@ const WORDS = {
     distance: "检测距离", externalPower: "外接电源", powerSource: "供电方式", batterySource: "电池", usbSource: "USB", usbBatterySource: "USB + 电池",
     serialNumber: "序列号", firmware: "固件版本", radarFirmware: "雷达版本", threadNetwork: "Thread 网络名称", signal: "信号", ipv6: "IPv6",
     adoptedDevices: "已由 Home Assistant 接管", discoveredDevices: "发现的设备", noAdopted: "尚未接管设备。",
-    noDiscovered: "尚未发现其他 Lafaer 设备。", available: "可用", offline: "离线", checking: "正在检查…", lastSeen: "上次发现",
+    noDiscovered: "尚未发现其他 Lafaer 设备。", available: "已发现", offline: "本次未发现", checking: "正在检查…", lastSeen: "上次发现",
     adoptedHelp: "查看传感器状态并管理设备设置。",
     discoveredHelp: "选择设备并交由 Home Assistant 管理。",
     takeoverConnecting: "正在连接并认证…", takeoverFailed: "接管失败", takeoverSucceeded: "接管完成",
@@ -151,7 +151,7 @@ const WORDS = {
     thresholdInvalid: "雷達閾值須為 1–65535 的整數，不能設定為 0。",
     learningStart: "開始自我學習",
     learningTip: "請盡量移除偵測區域內可能造成干擾的設備，並將裝置安裝於合適位置。點選下方按鈕開始雷達自我學習，並在啟動後 30 秒內離開偵測區域。\n此功能會根據目前環境，自動調整雷達靈敏度參數。",
-    title: "Lafaer", devices: "裝置", scan: "掃描", scanning: "正在掃描…", noDevices: "未找到裝置",
+    title: "Lafaer", devices: "裝置", scan: "掃描", scanning: "正在搜尋…", scanFailed: "搜尋失敗，請重試。", previouslyDiscovered: "曾發現", discoveryUnknown: "尚未確認", noDevices: "未找到裝置",
     disconnected: "未連線", connected: "已連線", open: "開啟", takeover: "接管",
     takeoverTitle: "接管此裝置？", takeoverWarning: "感測器只能保存一組管理金鑰。\nHome Assistant 將覆寫 App 金鑰，此後 App 無法繼續管理此感測器。",
     pairHint: "請長按感測器按鈕 3 秒，直到指示燈緩慢閃爍，然後確認。", cancel: "取消", confirm: "確認",
@@ -174,7 +174,7 @@ const WORDS = {
     distance: "偵測距離", externalPower: "外接電源", powerSource: "供電方式", batterySource: "電池", usbSource: "USB", usbBatterySource: "USB + 電池",
     serialNumber: "序號", firmware: "韌體版本", radarFirmware: "雷達版本", threadNetwork: "Thread 網路名稱", signal: "訊號", ipv6: "IPv6",
     adoptedDevices: "已由 Home Assistant 接管", discoveredDevices: "探索到的裝置", noAdopted: "尚未接管裝置。",
-    noDiscovered: "尚未探索到其他 Lafaer 裝置。", available: "可用", offline: "離線", checking: "正在檢查…", lastSeen: "上次發現",
+    noDiscovered: "尚未探索到其他 Lafaer 裝置。", available: "已發現", offline: "本次未發現", checking: "正在檢查…", lastSeen: "上次發現",
     adoptedHelp: "查看感測器狀態並管理裝置設定。",
     discoveredHelp: "選擇裝置並交由 Home Assistant 管理。",
     takeoverConnecting: "正在連線並驗證…", takeoverFailed: "接管失敗", takeoverSucceeded: "接管完成",
@@ -198,7 +198,7 @@ const localeFor = (language = "en") => {
 };
 
 const LIST_STYLES = `<style>
-.menu-wrap{position:relative}.function-menu{position:absolute;z-index:20;right:0;top:44px;min-width:210px;padding:6px;background:var(--card-background-color);border:1px solid var(--divider-color);border-radius:8px;box-shadow:var(--ha-card-box-shadow,0 3px 12px rgba(0,0,0,.18))}.function-menu button{display:flex;align-items:center;gap:12px;width:100%;border:0;border-radius:6px;padding:12px;background:transparent;color:var(--primary-text-color);font:inherit;text-align:left;cursor:pointer}.function-menu button:hover{background:var(--secondary-background-color)}
+#scan-progress{display:inline-flex;align-items:center;gap:8px;color:var(--secondary-text-color);font-size:13px;align-self:center}#scan-progress:empty{display:none}#scan-progress ha-circular-progress{flex:0 0 auto}#discovery-history[hidden]{display:none}.list-layout .section-header{flex-wrap:wrap}.menu-wrap{position:relative}.function-menu{position:absolute;z-index:20;right:0;top:44px;min-width:210px;padding:6px;background:var(--card-background-color);border:1px solid var(--divider-color);border-radius:8px;box-shadow:var(--ha-card-box-shadow,0 3px 12px rgba(0,0,0,.18))}.function-menu button{display:flex;align-items:center;gap:12px;width:100%;border:0;border-radius:6px;padding:12px;background:transparent;color:var(--primary-text-color);font:inherit;text-align:left;cursor:pointer}.function-menu button:hover{background:var(--secondary-background-color)}
 </style>`;
 
 const DETAIL_STYLES = `<style>
@@ -351,7 +351,7 @@ class LafaerThresholdChart extends HTMLElement {
 if (!customElements.get("lafaer-threshold-chart")) customElements.define("lafaer-threshold-chart", LafaerThresholdChart);
 
 class HaLafaerPanel extends HTMLElement {
-  constructor() { super(); this.attachShadow({mode:"open"}); this._view="list"; this._devices=[]; this._discovered=[]; this._snapshot=null; this._unsub=null; this._heartbeat=null; this._busy=false; this._notice=null; this._sessionGeneration=0; this._subscribing=false; this._initialScanStarted=false; this._hasScanned=false; this._loading=false; this._adoptionStates=new Map(); this._adoptingKey=null; this._menuOpen=false; this._energyOpen=false; this._visibility=()=>this._onVisibility();this._pageHide=()=>{this._pageClosing=true;this._closeSession();}; }
+  constructor() { super(); this.attachShadow({mode:"open"}); this._view="list"; this._devices=[]; this._discovered=[]; this._snapshot=null; this._unsub=null; this._heartbeat=null; this._busy=false; this._notice=null; this._sessionGeneration=0; this._subscribing=false; this._initialScanStarted=false; this._hasScanned=false; this._loading=false; this._adoptionStates=new Map(); this._adoptingKey=null; this._menuOpen=false; this._energyOpen=false; this._visibility=()=>this._onVisibility();this._pageHide=()=>{this._pageClosing=true;this._stopDiscovery();this._closeSession();}; }
   set hass(value) { const old=this._hass?.language; this._hass=value; this._bindSidebar(); if(!this._loaded) this._load(); else if(old!==value.language) this.render(); }
   set narrow(value){this._narrow=Boolean(value);this._bindSidebar();}
   get narrow(){return this._narrow??false;}
@@ -359,10 +359,78 @@ class HaLafaerPanel extends HTMLElement {
   _bindSidebar(){const button=this.shadowRoot?.querySelector("#sidebar-menu");if(!button)return;if(button.tagName==="HA-MENU-BUTTON"){button.hass=this._hass;button.narrow=this.narrow;}else{button.onclick=()=>this.dispatchEvent(new CustomEvent("hass-toggle-menu",{bubbles:true,composed:true}));}}
   set panel(value) { this._panel=value; }
   connectedCallback() { this._detached=false;this._pageClosing=false;window.addEventListener("pagehide",this._pageHide);this._loaded=true; document.addEventListener("visibilitychange",this._visibility); if(this._hass) this._load(); }
-  disconnectedCallback() { this._finishScrollRestore?.();clearTimeout(this._noticeTimer);this._detached=true;window.removeEventListener("pagehide",this._pageHide);document.removeEventListener("visibilitychange",this._visibility); this._closeSession(); }
+  disconnectedCallback() { this._finishScrollRestore?.();clearTimeout(this._noticeTimer);this._detached=true;window.removeEventListener("pagehide",this._pageHide);document.removeEventListener("visibilitychange",this._visibility); this._stopDiscovery();this._closeSession(); }
   get t() { return WORDS[localeFor(this._hass?.language)]; }
-  async _load() { if(!this._hass||this._loading)return;this._loading=true;try {this._devices=await this._hass.callWS({type:"lafaer/devices/list"});this.render();if(!this._initialScanStarted){this._initialScanStarted=true;await this._scan();}} catch(e){this._error=e.message;this.render();}finally{this._loading=false;} }
-  async _scan() { if(this._scanning)return;const revision=this._discoveryRevision||0;this._scanning=true;this._error=null;this.render();try{const discovered=await this._hass.callWS({type:"lafaer/discover",timeout:15});if(revision===(this._discoveryRevision||0))this._discovered=discovered;this._devices=await this._hass.callWS({type:"lafaer/devices/list"});}catch(e){this._error=e.message;}finally{this._hasScanned=true;this._scanning=false;this.render();} }
+  async _load(){if(!this._hass||this._view!=="list"||this._detached)return;if(!this._initialScanStarted||!this._scanUnsub&&!this._scanning){this._initialScanStarted=true;await this._scan();}}
+  async _stopDiscovery(){
+    this._scanGeneration=(this._scanGeneration||0)+1;
+    clearTimeout(this._scanTimeout);this._scanTimeout=null;this._scanning=false;this._scanStarting=false;
+    const unsubscribe=this._scanUnsub;this._scanUnsub=null;
+    if(unsubscribe){try{await unsubscribe();}catch{/* The socket may already be closed. */}}
+  }
+  _mergeDiscoveryOrder(previous,incoming,discovery=false){
+    const byKey=new Map(incoming.map(device=>[this._adoptionKey(device),device]));
+    const merged=[];
+    const order=discovery?[...previous.filter(device=>device.available===true),...previous.filter(device=>device.available!==true)]:previous;
+    for(const device of order){const key=this._adoptionKey(device);if(byKey.has(key)){merged.push(byKey.get(key));byKey.delete(key);}}
+    return [...merged,...byKey.values()];
+  }
+  async _scan(){
+    if(this._scanning||this._scanStarting||!this._hass||this._view!=="list"||this._detached||document.hidden)return;
+    this._stopDiscovery();const generation=this._scanGeneration;
+    this._scanStarting=true;
+    if(generation!==this._scanGeneration||this._view!=="list"||this._detached||document.hidden){this._scanStarting=false;return;}
+    this._scanRevision=undefined;
+    this._scanning=true;this._hasScanned=false;this._scanFailed=false;this._error=null;
+    this._discovered=this._discovered.map(device=>({...device,available:false}));
+    this.render();
+    const fail=error=>{if(generation!==this._scanGeneration)return;this._scanFailed=true;this._error=error?.message||this.t.scanFailed;this._stopDiscovery();this.render();};
+    this._scanTimeout=setTimeout(()=>fail(),30000);
+    try{
+      const unsubscribe=await this._hass.connection.subscribeMessage(event=>{
+        if(generation!==this._scanGeneration||this._view!=="list"||this._detached)return;
+        if(this._scanRevision!==undefined&&event.revision<this._scanRevision)return;
+        this._scanRevision=event.revision;
+        this._devices=this._mergeDiscoveryOrder(this._devices,event.devices||[]);
+        this._discovered=this._mergeDiscoveryOrder(this._discovered,event.discovered||[],true);
+        this._scanning=event.scanning===true;this._hasScanned=!this._scanning&&!event.error;this._scanFailed=Boolean(event.error);
+        if(event.error){fail({message:this.t.scanFailed});return;}
+        this._updateDiscoveryList();
+        if(!this._scanning)this._stopDiscovery();
+      },{type:"lafaer/discovery/subscribe"});
+      if(generation!==this._scanGeneration||!this._scanning||this._view!=="list"){await unsubscribe();return;}
+      this._scanUnsub=unsubscribe;
+    }catch(error){fail(error);}finally{if(generation===this._scanGeneration)this._scanStarting=false;}
+  }
+  _updateDiscoveryList(){
+    if(this._activeDialog||this._view!=="list")return;
+    const current=this.shadowRoot.querySelector(".list-layout");
+    if(!current){this.render();return;}
+    const holder=document.createElement("div");holder.innerHTML=this._renderList();
+    const next=holder.querySelector(".list-layout");
+    const restore=this._preserveRenderScroll(),focused=this.shadowRoot.activeElement;
+    const key=node=>node.nodeType===1?(node.getAttribute("data-device-key")||node.id||null):null;
+    const saved=new Map([...current.querySelectorAll("[data-device-key]")].map(node=>[key(node),node]));
+    const patch=(target,source)=>{
+      if(target.nodeType===3){if(target.textContent!==source.textContent)target.textContent=source.textContent;return;}
+      if(target.nodeType!==1)return;
+      for(const attr of [...target.attributes])if(!source.hasAttribute(attr.name))target.removeAttribute(attr.name);
+      for(const attr of [...source.attributes])if(target.getAttribute(attr.name)!==attr.value)target.setAttribute(attr.name,attr.value);
+      let cursor=target.firstChild;
+      for(const child of [...source.childNodes]){
+        const childKey=key(child);
+        let match=childKey?(saved.get(childKey)||[...target.childNodes].find(node=>key(node)===childKey)):cursor;
+        if(match&&(match.nodeType!==child.nodeType||match.nodeName!==child.nodeName||(!childKey&&key(match))))match=null;
+        if(!match){match=child.cloneNode(true);target.insertBefore(match,cursor);}
+        else{if(match!==cursor)target.insertBefore(match,cursor);patch(match,child);}
+        cursor=match.nextSibling;
+      }
+      while(cursor){const nextSibling=cursor.nextSibling;cursor.remove();cursor=nextSibling;}
+    };
+    patch(current,next);this._bind();
+    if(focused?.isConnected&&this.shadowRoot.activeElement!==focused)focused.focus({preventScroll:true});
+    restore();
+  }
 
   async _dialog({title,text="",fields=[],accept=this.t.save,validate,informational=false}){
     if(this._activeDialog)return false;
@@ -399,7 +467,7 @@ class HaLafaerPanel extends HTMLElement {
   _adoptionKey(device){return `${device?.model||""}:${device?.device_id||""}`;}
   _errorText(error){const values=[error?.message,error?.body?.message,error?.error?.message,typeof error==="string"?error:null,error?.code];const detail=values.find(value=>typeof value==="string"&&value.trim()&&value.trim().toLowerCase()!=="unknown error");const message=detail?.trim();return this.t[message]||message||this.t.unknownError;}
   async _adopt(device) { if(!device?.device_id?.trim()||!device?.host?.trim()||!device?.thread_mac?.trim()){this._error=this.t.requiredFields;this.render();return;}if(this._adoptingKey)return;if(!await this._dialog({title:this.t.takeoverTitle,text:`${this.t.takeoverWarning}\n\n${this.t.pairHint}`,accept:this.t.confirm}))return;const key=this._adoptionKey(device);this._adoptingKey=key;this._adoptionStates.set(key,{status:"working",message:this.t.takeoverConnecting});this._busy=true;this._error=this._notice=null;this.render();const request={type:"lafaer/device/adopt",device_id:device.device_id.trim(),model:device.model,host:device.host.trim(),thread_mac:device.thread_mac.trim(),version:device.version||"",name:device.name||`${device.model} ${device.device_id}`};if(typeof device.blue_id==="string")request.blue_id=device.blue_id;try{await this._hass.callWS(request);this._adoptionStates.set(key,{status:"success",message:this.t.takeoverSucceeded});await this._load();}catch(e){this._adoptionStates.set(key,{status:"error",message:`${this.t.takeoverFailed}: ${this._errorText(e)}`});}finally{this._adoptingKey=null;this._busy=false;this.render();} }
-  async _open(device) { this._selected=device; this._settingsPage=false; this._view="detail"; this._snapshot=null; this._error=this._notice=null; this._menuOpen=false; this._energyOpen=false; this._rangeOpen=false; this._rangeDraft=this._detectionDraft=this._keepDraft=this._triggerDraft=this._holdDraft=this._timeoutDraft=this._luxDraft=this._darknessDraft=this._batteryPerformanceDraft=this._usbPerformanceDraft=this._workModeDraft=this._pirDraft=this._radarDraft=this._batteryTypeDraft=null; this.render(); await this._subscribe(); }
+  async _open(device) { this._stopDiscovery();this._selected=device; this._settingsPage=false; this._view="detail"; this._snapshot=null; this._error=this._notice=null; this._menuOpen=false; this._energyOpen=false; this._rangeOpen=false; this._rangeDraft=this._detectionDraft=this._keepDraft=this._triggerDraft=this._holdDraft=this._timeoutDraft=this._luxDraft=this._darknessDraft=this._batteryPerformanceDraft=this._usbPerformanceDraft=this._workModeDraft=this._pirDraft=this._radarDraft=this._batteryTypeDraft=null; this.render(); await this._subscribe(); }
   async _subscribe(){
     if(this._detached||!this._selected||document.hidden||this._unsub||this._subscribing)return;
     const generation=this._sessionGeneration,deviceId=this._selected.device_id;
@@ -445,6 +513,7 @@ class HaLafaerPanel extends HTMLElement {
   async _readRadarStatus(){if(this._snapshot?.connected!==true||this._connecting||this._busy||!this._settingsPage||document.hidden||!this._viewerId||this._pendingStatus)return;this._pendingStatus=true;const generation=this._sessionGeneration;try{const r=await this._hass.callWS({type:"lafaer/device/read",device_id:this._selected.device_id,kind:"sensing_status"});if(generation!==this._sessionGeneration||!this._settingsPage)return;this._pollStatusReady=r.values.ranges_valid!==false;this._snapshot={...this._snapshot,radar_status:r.values};if(this._syncLearningState())this.render();const pir=this.shadowRoot.querySelector("#pir-state");if(pir)pir.textContent=r.values.pir_status===1?this.t.detected:this.t.clear;const gates=this.shadowRoot.querySelector("#range-status");if(gates)gates.config={...this._rangeStatusConfig(r.values),values:r.values.ranges,visibleCount:8,step:.75,readOnly:true};const range=this.shadowRoot.querySelector("#range");if(range){range.inert=r.values.ranges_valid===false;range.config={values:this._rangeDraft||r.values.ranges.map(value=>value===2?2:0),visibleCount:8,step:.75,disabledValue:2,enabledValue:0};}this._syncSensingControls();}catch(e){this._pollStatusReady=false;if(generation===this._sessionGeneration&&this._settingsPage){this._error=this._errorText(e);this.render();}}finally{this._pendingStatus=false;}}
   async _closeSession(){this._connecting=false;clearInterval(this._learningTimer);this._learningTimer=null;this._learningState=null;this._stopPolling();clearTimeout(this._backgroundTimer);this._backgroundTimer=null;clearInterval(this._rangeTimer);this._rangeTimer=null;this._sessionGeneration++;clearInterval(this._heartbeat);clearInterval(this._detectionTimer);clearInterval(this._keepTimer);this._heartbeat=this._detectionTimer=this._keepTimer=null;this._viewerId=null;if(this._unsub){const u=this._unsub;this._unsub=null;await u();}}
   async _onVisibility(){
+    if(this._view==="list"){if(document.hidden)await this._stopDiscovery();else await this._scan();return;}
     if(this._view!=="detail"||this._detached)return;
     clearTimeout(this._backgroundTimer);this._backgroundTimer=null;
     if(document.hidden){
@@ -548,10 +617,10 @@ class HaLafaerPanel extends HTMLElement {
   _icdText(device){const detected=this._lastSeen({last_seen:this._icdDevice(device)?.icd_last_seen});return this.t.icdDescription+(detected?`\n\n${this.t.icdLastSeen}: ${detected}`:"");}
   _icdBadge(device){if(this._icdDevice(device)?.icd_lit!==true)return "";return `<button type="button" class="icd-badge" data-icd="${esc(device.device_id)}" data-model="${esc(device.model)}" title="${esc(this._icdText(device))}" aria-label="${esc(this.t.icdTitle)}" aria-haspopup="dialog">ICD</button>`;}
   async _showICD(device){await this._dialog({title:this.t.icdTitle,text:this._icdText(device),accept:this.t.gotIt,informational:true});}
-  _availability(device){if(!this._hasScanned)return null;const found=this._discovered.find(item=>item.device_id===device.device_id&&item.model===device.model);return found?.available===true;}
+  _availability(device){const found=this._discovered.find(item=>item.device_id===device.device_id&&item.model===device.model);if(found?.available===true)return true;return this._scanning||!this._hasScanned?null:false;}
   _lastSeen(device){if(!device?.last_seen)return "";const date=new Date(device.last_seen);if(Number.isNaN(date.valueOf()))return "";return new Intl.DateTimeFormat(localeFor(this._hass?.language),{dateStyle:"medium",timeStyle:"short"}).format(date);}
-  _deviceCard(device,{adopted,history=false}){const t=this.t,available=this._availability(device),cached=this._discovered.find(item=>item.device_id===device.device_id&&item.model===device.model),lastSeen=this._lastSeen(cached||device),state=history?t.notSeen:available===null?t.checking:available?t.available:t.offline,operation=this._adoptionStates.get(this._adoptionKey(device)),working=operation?.status==="working",operationColor=operation?.status==="success"?"var(--success-color,#43a047)":operation?.status==="error"?"var(--error-color,#db4437)":"var(--secondary-text-color)";return `<div role="listitem"><div class="device"><ha-icon icon="mdi:motion-sensor"></ha-icon><div><div class="device-name-row"><h3>${esc(device.name||`${device.model} ${device.device_id}`)}</h3>${this._icdBadge(device)}${adopted?`<span class="device-name-actions"><button type="button" class="device-icon-action" data-rename="${esc(device.device_id)}" title="${esc(t.rename)}" aria-label="${esc(t.rename)}"><ha-icon icon="mdi:pencil-outline" aria-hidden="true"></ha-icon></button><button type="button" class="device-icon-action" data-forget-device="${esc(device.device_id)}" title="${esc(t.forget)}" aria-label="${esc(t.forget)}"><ha-icon icon="mdi:delete-outline" aria-hidden="true"></ha-icon></button></span>`:""}</div><p>${esc(device.model)} · ${esc(device.version||"")}</p>${lastSeen?`<small>${t.lastSeen}: ${esc(lastSeen)}</small>`:""}${operation?`<div style="display:flex;align-items:center;gap:7px;margin:10px 3px 2px;font-size:13px;color:${operationColor}">${working?`<ha-circular-progress active size="small"></ha-circular-progress>`:`<ha-icon icon="${operation.status==="success"?"mdi:check-circle":"mdi:alert-circle"}" style="--mdc-icon-size:18px"></ha-icon>`}<span>${esc(operation.message)}</span></div>`:""}</div><span class="status ${available===true?"available":available===false?"offline":"checking"}">${esc(state)}</span>${adopted?"":`<ha-button appearance="plain" class="secondary-action" data-remove-record="${esc(device.device_id)}" data-model="${esc(device.model)}">${t.removeRecord}</ha-button>`}${history?"":`<ha-button ${adopted?`data-open="${esc(device.device_id)}"`:`data-adopt="${esc(device.device_id)}"`} ${working||(!adopted&&available!==true)?"disabled":""}>${working?t.takeoverConnecting:adopted?t.open:t.takeover}</ha-button>`}</div></div>`;}
-  _renderList(){const t=this.t,records=this._discovered.filter(d=>!this._devices.some(s=>s.device_id===d.device_id&&s.model===d.model)),unmanaged=records.filter(d=>d.available===true),history=records.filter(d=>d.available!==true);return `${LIST_STYLES}<header class="list-header">${this._sidebarButton()}<h1>${t.devices}</h1><div class="menu-wrap"><ha-icon-button id="more" title="${esc(t.moreActions)}"><ha-icon icon="mdi:dots-vertical"></ha-icon></ha-icon-button>${this._menuOpen?`<div class="function-menu" role="menu"><button id="menu-manual" role="menuitem"><ha-icon icon="mdi:plus-network"></ha-icon><span class="menu-label">${t.manualAdd}</span></button><button id="menu-debug" role="menuitem"><ha-icon icon="mdi:bug-outline"></ha-icon><span class="menu-label">${t.debug}</span></button></div>`:""}</div></header><div class="page-content list-layout"><ha-card class="panel-card"><section class="detail-section"><div class="section-header"><div><h2>${t.adoptedDevices}</h2><p>${t.adoptedHelp}</p></div></div><div class="cards" role="list">${this._devices.length?this._devices.map(d=>this._deviceCard(d,{adopted:true})).join(""):`<p class="empty">${t.noAdopted}</p>`}</div></section></ha-card><ha-card class="panel-card"><section class="detail-section"><div class="section-header"><div><h2>${t.discoveredDevices}</h2><p>${t.discoveredHelp}</p></div><ha-button id="scan">${this._scanning?t.scanning:t.scan}</ha-button></div><div class="cards" role="list">${unmanaged.length?unmanaged.map(d=>this._deviceCard(d,{adopted:false})).join(""):`<p class="empty">${this._scanning?t.scanning:t.noDiscovered}</p>`}</div>${history.length?`<details id="discovery-history" ${this._historyOpen?"open":""}><summary><span class="history-title">${t.discoveryHistory} (${history.length})</span><ha-button id="clear-history" appearance="plain" class="secondary-action">${t.clearHistory}</ha-button></summary><div class="cards" role="list">${history.map(d=>this._deviceCard(d,{adopted:false,history:true})).join("")}</div></details>`:""}</section></ha-card></div>`;}
+  _deviceCard(device,{adopted,history=false}){const t=this.t,available=this._availability(device),cached=this._discovered.find(item=>item.device_id===device.device_id&&item.model===device.model),lastSeen=this._lastSeen(cached||device),state=history?(this._hasScanned?t.notSeen:t.previouslyDiscovered):available===null?(this._scanning?t.checking:t.discoveryUnknown):available?t.available:t.offline,operation=this._adoptionStates.get(this._adoptionKey(device)),working=operation?.status==="working",operationColor=operation?.status==="success"?"var(--success-color,#43a047)":operation?.status==="error"?"var(--error-color,#db4437)":"var(--secondary-text-color)";return `<div role="listitem" data-device-key="${esc(this._adoptionKey(device))}"><div class="device"><ha-icon icon="mdi:motion-sensor"></ha-icon><div><div class="device-name-row"><h3>${esc(device.name||`${device.model} ${device.device_id}`)}</h3>${this._icdBadge(device)}${adopted?`<span class="device-name-actions"><button type="button" class="device-icon-action" data-rename="${esc(device.device_id)}" title="${esc(t.rename)}" aria-label="${esc(t.rename)}"><ha-icon icon="mdi:pencil-outline" aria-hidden="true"></ha-icon></button><button type="button" class="device-icon-action" data-forget-device="${esc(device.device_id)}" title="${esc(t.forget)}" aria-label="${esc(t.forget)}"><ha-icon icon="mdi:delete-outline" aria-hidden="true"></ha-icon></button></span>`:""}</div><p>${esc(device.model)} · ${esc(device.version||"")}</p>${lastSeen?`<small>${t.lastSeen}: ${esc(lastSeen)}</small>`:""}${operation?`<div style="display:flex;align-items:center;gap:7px;margin:10px 3px 2px;font-size:13px;color:${operationColor}">${working?`<ha-circular-progress active size="small"></ha-circular-progress>`:`<ha-icon icon="${operation.status==="success"?"mdi:check-circle":"mdi:alert-circle"}" style="--mdc-icon-size:18px"></ha-icon>`}<span>${esc(operation.message)}</span></div>`:""}</div><span class="status ${available===true?"available":available===false?"offline":"checking"}">${esc(state)}</span>${adopted?"":`<ha-button appearance="plain" class="secondary-action" data-remove-record="${esc(device.device_id)}" data-model="${esc(device.model)}">${t.removeRecord}</ha-button>`}${history?"":`<ha-button ${adopted?`data-open="${esc(device.device_id)}"`:`data-adopt="${esc(device.device_id)}"`} ${working||(!adopted&&available!==true)?"disabled":""}>${working?t.takeoverConnecting:adopted?t.open:t.takeover}</ha-button>`}</div></div>`;}
+  _renderList(){const t=this.t,records=this._discovered.filter(d=>!this._devices.some(s=>s.device_id===d.device_id&&s.model===d.model)),unmanaged=records.filter(d=>d.available===true),history=records.filter(d=>d.available!==true);return `${LIST_STYLES}<header class="list-header">${this._sidebarButton()}<h1>${t.devices}</h1><div class="menu-wrap"><ha-icon-button id="more" title="${esc(t.moreActions)}"><ha-icon icon="mdi:dots-vertical"></ha-icon></ha-icon-button>${this._menuOpen?`<div class="function-menu" role="menu"><button id="menu-manual" role="menuitem"><ha-icon icon="mdi:plus-network"></ha-icon><span class="menu-label">${t.manualAdd}</span></button><button id="menu-debug" role="menuitem"><ha-icon icon="mdi:bug-outline"></ha-icon><span class="menu-label">${t.debug}</span></button></div>`:""}</div></header><div class="page-content list-layout"><ha-card class="panel-card"><section class="detail-section"><div class="section-header"><div><h2>${t.adoptedDevices}</h2><p>${t.adoptedHelp}</p></div></div><div id="managed-devices" class="cards" role="list">${this._devices.length?this._devices.map(d=>this._deviceCard(d,{adopted:true})).join(""):`<p class="empty">${t.noAdopted}</p>`}</div></section></ha-card><ha-card class="panel-card"><section class="detail-section"><div class="section-header"><div><h2>${t.discoveredDevices}</h2><p>${t.discoveredHelp}</p></div><span id="scan-progress" role="status" aria-live="polite">${this._scanning?`<ha-circular-progress active size="small"></ha-circular-progress><span>${t.scanning}</span>`:""}</span><ha-button id="scan" ${this._scanning?"disabled":""}>${t.scan}</ha-button></div><div id="discovered-devices" class="cards" role="list">${unmanaged.length?unmanaged.map(d=>this._deviceCard(d,{adopted:false})).join(""):`<p class="empty">${this._scanning?"":t.noDiscovered}</p>`}</div><details id="discovery-history" ${history.length?"":"hidden"} ${this._historyOpen?"open":""}><summary><span class="history-title">${t.discoveryHistory} (${history.length})</span><ha-button id="clear-history" appearance="plain" class="secondary-action">${t.clearHistory}</ha-button></summary><div id="historical-devices" class="cards" role="list">${history.map(d=>this._deviceCard(d,{adopted:false,history:true})).join("")}</div></details></section></ha-card></div>`;}
   _renderDetail(){
     if(this._snapshot?.connected!==true)return this._renderConnection();
     if(this._settingsPage)return this._renderSettingsPage();
@@ -600,7 +669,7 @@ class HaLafaerPanel extends HTMLElement {
     if(q("#more"))q("#more").onclick=()=>{this._menuOpen=!this._menuOpen;this.render();};
     if(q("#detail-more"))q("#detail-more").onclick=()=>{this._menuOpen=!this._menuOpen;this.render();};
     if(q("#menu-manual"))q("#menu-manual").onclick=()=>{this._menuOpen=false;this.render();this._manualDialog();};
-    if(q("#menu-debug"))q("#menu-debug").onclick=()=>{this._menuOpen=false;this._view="debug";this._renderDebug();};
+    if(q("#menu-debug"))q("#menu-debug").onclick=()=>{this._stopDiscovery();this._menuOpen=false;this._view="debug";this._renderDebug();};
     this.shadowRoot.querySelectorAll("[data-icd]").forEach(button=>button.onclick=event=>{event.stopPropagation();const device=[...this._devices,...this._discovered,this._selected].find(item=>item?.device_id===button.dataset.icd&&item?.model===button.dataset.model);if(device)this._showICD(device);});
     if(q("#scan"))q("#scan").onclick=()=>this._scan();
     if(q("#discovery-history"))q("#discovery-history").ontoggle=e=>{this._historyOpen=e.target.open;};
@@ -613,7 +682,7 @@ class HaLafaerPanel extends HTMLElement {
     if(q("#open-settings"))q("#open-settings").onclick=()=>{this._settingsPage=true;this._notice=null;this._menuOpen=false;this.render();this._setRangePolling(true);};
     if(q("#back"))q("#back").onclick=()=>{if(this._settingsPage){this._settingsPage=false;this._setEnergyPolling(false);this._setRangePolling(false);this._notice=null;this._menuOpen=false;this.render();}else this._back();};
     if(q("#retry"))q("#retry").onclick=()=>this._retry();
-    if(q("#back-debug"))q("#back-debug").onclick=()=>{this._view="list";this.render();};
+    if(q("#back-debug"))q("#back-debug").onclick=()=>{this._view="list";this._load();};
     if(q("#clear-debug"))q("#clear-debug").onclick=async()=>{await this._hass.callWS({type:"lafaer/debug/clear"});this._renderDebug();};
     if(q("#download-debug"))q("#download-debug").onclick=()=>{const blob=new Blob([JSON.stringify(this._logs||[],null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`lafaer-debug-${new Date().toISOString()}.json`;a.click();URL.revokeObjectURL(url);};
     if(q("#led"))q("#led").onchange=e=>this._action("set_led",{enabled:e.target.checked});

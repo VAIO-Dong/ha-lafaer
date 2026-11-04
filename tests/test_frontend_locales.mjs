@@ -40,6 +40,9 @@ for (const key of [
   "radarModeRequired",
   "thresholdValue",
   "connectingDevice",
+  "scanFailed",
+  "previouslyDiscovered",
+  "discoveryUnknown",
   "icdTitle",
   "icdDescription",
   "icdConnectingHint",
@@ -806,7 +809,7 @@ for(const language of ["en","zh-Hans","zh-Hant"]){
   assert.match(card,/<ha-button data-open="managed"/);
   assert.doesNotMatch(card,/role="menu"/);
   const markup=listPanel._renderList();
-  assert.match(markup,/<details id="discovery-history" >/,"history starts collapsed");
+  assert.match(markup,/<details id="discovery-history"\s*>/,"history starts collapsed");
   assert.match(markup,/id="clear-history"/);
   assert.match(markup,/<summary><span class="history-title">[^<]+<\/span><ha-button id="clear-history" appearance="plain"/);
   assert.doesNotMatch(markup,/history-actions/);
@@ -842,16 +845,14 @@ const scanPanel=new Panel();
 scanPanel.render=()=>{};
 scanPanel._dialog=async()=>true;
 scanPanel._discovered=[{device_id:"old",model:"LWR02",available:false}];
-let finishScan;
-scanPanel._hass={language:"en",callWS:async request=>{
-  if(request.type==="lafaer/discover")return new Promise(resolve=>{finishScan=resolve;});
-  if(request.type==="lafaer/devices/list")return [];
-}};
-const scanning=scanPanel._scan();
+let updateScan;
+scanPanel._hass={language:"en",connection:{subscribeMessage:async callback=>{updateScan=callback;return async()=>{};}},callWS:async()=>{}};
+await scanPanel._scan();
 await scanPanel._removeDiscovery(scanPanel._discovered[0]);
-finishScan([{device_id:"old",model:"LWR02",available:true}]);
-await scanning;
+updateScan({scan_id:1,revision:1,scanning:true,devices:[],discovered:[]});
+updateScan({scan_id:1,revision:0,scanning:true,devices:[],discovered:[{device_id:"old",model:"LWR02",available:true}]});
 assert.equal(scanPanel._discovered.length,0,"late scan response cannot undo a deletion");
+await scanPanel._stopDiscovery();
 }
 
 console.log("frontend locale and lifecycle checks passed");
