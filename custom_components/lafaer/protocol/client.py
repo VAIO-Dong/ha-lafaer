@@ -447,10 +447,10 @@ class LafaerProtocolClient:
 
     @staticmethod
     def validate_thresholds(values: list[int]) -> None:
-        """Reject unsafe thresholds before any configuration is written."""
+        """Validate the eight active gates; retain seven unused wire fields as-is."""
         if len(values) != 15:
             raise ValueError("radar thresholds must contain 15 values")
-        if any(type(value) is not int or not 1 <= value <= 65535 for value in values):
+        if any(type(value) is not int or not 1 <= value <= 65535 for value in values[:8]):
             raise ValueError("radar thresholds must be integers between 1 and 65535")
 
     async def async_set_thresholds(self, values: list[int], *, keep: bool) -> None:

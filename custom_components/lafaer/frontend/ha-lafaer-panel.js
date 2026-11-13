@@ -23,6 +23,9 @@ const WORDS = {
     learningWaiting: "Radar self-learning in progress. Please wait until it finishes before changing settings.",
     learningDone: "Radar self-learning completed",
     thresholdInvalid: "Radar thresholds must be whole numbers between 1 and 65535. Zero is not allowed.",
+    thresholdInvalidGate: "{group}, {range} m: enter a whole number between 1 and 65535. Zero is not allowed.",
+    thresholdMotion: "Motion detection threshold", thresholdPresence: "Presence hold threshold",
+    thresholdIncomplete: "Threshold data is incomplete. Reconnect the device and try again.",
     learningStart: "Start Self-Learning",
     learningTip: "Please remove any devices that might cause interference from the detection area and install the device in an appropriate location. Tap the button below to start Auto-Adaptation. Once started, please leave the detection area immediately within 30 seconds. This feature will intelligently optimize the radar sensitivity parameters based on your current environment for a better experience.",
     title: "Lafaer", devices: "Devices", scan: "Scan", scanning: "Searching…", scanFailed: "Search failed. Please try again.", previouslyDiscovered: "Previously discovered", discoveryUnknown: "Not checked",
@@ -87,6 +90,9 @@ const WORDS = {
     learningWaiting: "雷达自学习中，请等待完成后再设置",
     learningDone: "雷达自学习已完成",
     thresholdInvalid: "雷达阈值须为 1–65535 的整数，不能设置为 0。",
+    thresholdInvalidGate: "{group}（{range} 米）：请输入 1–65535 的整数，不能为 0。",
+    thresholdMotion: "运动检测阈值", thresholdPresence: "存在维持阈值",
+    thresholdIncomplete: "阈值数据不完整，请重新连接设备后重试。",
     learningStart: "开始自学习",
     learningTip: "请尽量移除检测区域内任何可能干扰的设备。并将设备安装到合适位置。点击下方按钮开始自动适应。启动后，请在30秒内离开检测区域。\n自适应功能将根据当前环境，智能优化雷达灵敏度参数，为您带来更佳体验。",
     title: "Lafaer", devices: "设备", scan: "扫描", scanning: "正在搜索…", scanFailed: "搜索失败，请重试。", previouslyDiscovered: "曾发现", discoveryUnknown: "尚未确认", noDevices: "未扫描到设备",
@@ -149,6 +155,9 @@ const WORDS = {
     learningWaiting: "雷達正在進行自我學習，請等待完成後再設定。",
     learningDone: "雷達自我學習已完成",
     thresholdInvalid: "雷達閾值須為 1–65535 的整數，不能設定為 0。",
+    thresholdInvalidGate: "{group}（{range} 公尺）：請輸入 1–65535 的整數，不能為 0。",
+    thresholdMotion: "運動偵測閾值", thresholdPresence: "存在維持閾值",
+    thresholdIncomplete: "閾值資料不完整，請重新連線裝置後重試。",
     learningStart: "開始自我學習",
     learningTip: "請盡量移除偵測區域內可能造成干擾的設備，並將裝置安裝於合適位置。點選下方按鈕開始雷達自我學習，並在啟動後 30 秒內離開偵測區域。\n此功能會根據目前環境，自動調整雷達靈敏度參數。",
     title: "Lafaer", devices: "裝置", scan: "掃描", scanning: "正在搜尋…", scanFailed: "搜尋失敗，請重試。", previouslyDiscovered: "曾發現", discoveryUnknown: "尚未確認", noDevices: "未找到裝置",
@@ -648,12 +657,16 @@ class HaLafaerPanel extends HTMLElement {
     if(this._selected?.model!=="LWR02"||data.work_mode===0||data.radar_sensitivity!==3)return true;
     for(const key of ["detection_thresholds","keep_thresholds"]){
       const values=data[key];
-      if(!Array.isArray(values)||values.length!==15||values.some(value=>!Number.isInteger(value)||value<1||value>65535)){
-        this._error=this.t.thresholdInvalid;
+      const complete=Array.isArray(values)&&values.length===15;
+      const invalidIndex=complete?values.slice(0,8).findIndex(value=>!Number.isInteger(value)||value<1||value>65535):-1;
+      if(!complete||invalidIndex!==-1){
+        this._error=complete?this.t.thresholdInvalidGate.replace("{group}",key==="detection_thresholds"?this.t.thresholdMotion:this.t.thresholdPresence).replace("{range}",`${invalidIndex*.75}–${(invalidIndex+1)*.75}`):this.t.thresholdIncomplete;
         this._energyOpen=true;
         this.render();
         const chart=this.shadowRoot.querySelector(key==="detection_thresholds"?"#detection-chart":"#keep-chart");
-        const invalid=[...(chart?.querySelectorAll("input")||[])].find(input=>!input.checkValidity());
+        const invalid=chart?.querySelector(`input[data-i="${invalidIndex}"]`);
+        invalid?.scrollIntoView?.({block:"nearest",inline:"nearest"});
+        invalid?.focus?.({preventScroll:true});
         invalid?.reportValidity();
         return false;
       }

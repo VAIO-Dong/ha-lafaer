@@ -34,7 +34,7 @@ async def test_unsafe_thresholds_never_sent(keep, invalid) -> None:
     client = LafaerProtocolClient("fd00::1", "pairing", model="LWR02")
     client._exchange = AsyncMock()
     values = [100] * 15
-    values[-1] = invalid
+    values[7] = invalid
     with pytest.raises(ValueError, match="integers between 1 and 65535"):
         await client.async_set_thresholds(values, keep=keep)
     client._exchange.assert_not_awaited()
@@ -50,6 +50,18 @@ async def test_threshold_boundaries(keep, value) -> None:
     command = Command.RADAR_KEEP_THRESHOLD if keep else Command.RADAR_DETECTION_THRESHOLD
     client._exchange.assert_awaited_once_with(
         command, method="POST", data=value.to_bytes(2, "big") * 15
+    )
+
+
+@pytest.mark.parametrize("keep", [False, True])
+async def test_unused_threshold_fields_are_preserved_including_zero(keep) -> None:
+    client = LafaerProtocolClient("fd00::1", "pairing", model="LWR02")
+    client._exchange = AsyncMock()
+    values = [69, 91, 91, 105, 154, 140, 72, 75, 0, 0, 17, 0, 65535, 0, 0]
+    await client.async_set_thresholds(values, keep=keep)
+    command = Command.RADAR_KEEP_THRESHOLD if keep else Command.RADAR_DETECTION_THRESHOLD
+    client._exchange.assert_awaited_once_with(
+        command, method="POST", data=b"".join(value.to_bytes(2, "big") for value in values)
     )
 
 

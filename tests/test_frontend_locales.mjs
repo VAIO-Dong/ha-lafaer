@@ -771,9 +771,9 @@ for(const language of ["en","zh-Hans","zh-Hant"]){
     for(const invalid of [0,-1,65536,1.5,NaN]){
       const data={work_mode:2,radar_sensitivity:3,detection_thresholds:Array(15).fill(1),keep_thresholds:Array(15).fill(65535)};
       assert.equal(thresholdsPanel._validateThresholdSubmission(data),true);
-      data[key][14]=invalid;
+      data[key][7]=invalid;
       assert.equal(thresholdsPanel._validateThresholdSubmission(data),false);
-      assert.equal(thresholdsPanel._error,thresholdsPanel.t.thresholdInvalid);
+      assert.equal(thresholdsPanel._error,thresholdsPanel.t.thresholdInvalidGate.replace("{group}",key==="detection_thresholds"?thresholdsPanel.t.thresholdMotion:thresholdsPanel.t.thresholdPresence).replace("{range}","5.25–6"));
       assert.equal(thresholdsPanel._energyOpen,true);
       data.work_mode=0;
       assert.equal(thresholdsPanel._validateThresholdSubmission(data),true,"PIR mode does not write radar thresholds");
@@ -783,6 +783,7 @@ for(const language of ["en","zh-Hans","zh-Hant"]){
   }
 }
 assert.match(source,/min="1" max="65535" required step="1"/);
+assert.equal(thresholdsPanel._validateThresholdSubmission({work_mode:2,radar_sensitivity:3,detection_thresholds:[...Array(8).fill(1),...Array(7).fill(0)],keep_thresholds:[...Array(8).fill(65535),...Array(7).fill(0)]}),true);
 assert.match(source,/if\(!this\._validateThresholdSubmission\(data\)\)return;if\(await this\._action\("save_mode_sensing"/);
 }
 
